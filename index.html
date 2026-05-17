@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+  <title>ARUL AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #F9F3EA 0%, #F0E6D8 100%); color: #1e1b1a; overflow-x: hidden; min-height: 100vh; }
+    
+    .neo-card { background: #ffffff; border: 2px solid #1e1b1a; box-shadow: 6px 6px 0px 0px rgba(0,0,0,1); transition: all 0.2s ease; }
+    .neo-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px 0px rgba(0,0,0,1); }
+    
+    button { border: 2px solid #1e1b1a; box-shadow: 3px 3px 0px 0px #1e1b1a; font-weight: 700; transition: 0.05s linear; cursor: pointer; background: #FFD166; }
+    button:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px 0px #1e1b1a; }
+    .send-btn { background: linear-gradient(135deg, #2DC653, #20A843); color: white; padding: 10px 20px; border-radius: 0; }
+    .attach-btn { background: linear-gradient(135deg, #FFD166, #FFC107); padding: 10px 14px; }
+    .remove-file-btn { background: #EF476F; color: white; padding: 4px 10px; font-size: 0.7rem; }
+    .download-btn { background: #118AB2; color: white; padding: 6px 12px; font-size: 0.7rem; text-decoration: none; display: inline-block; }
+    
+    .app-wrapper { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
+    
+    .sidebar { width: 280px; background: #F4EADB; border-right: 2px solid #1e1b1a; display: flex; flex-direction: column; flex-shrink: 0; height: 100vh; position: sticky; top: 0; overflow-y: auto; }
+    .profile-area { padding: 24px 20px; border-bottom: 2px solid #1e1b1a; margin: 12px; margin-bottom: 0; background: linear-gradient(135deg, #FFF8F0, #FFF0E0); }
+    .profile-name { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; background: linear-gradient(135deg, #1e1b1a, #2d3748); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .status { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.7rem; font-weight: 600; }
+    .online-dot { width: 10px; height: 10px; background: #2DC653; border-radius: 50%; border: 1.5px solid black; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .mood-text { font-size: 0.7rem; background: #FFE5B4; padding: 6px 10px; display: inline-block; border: 1.5px solid black; margin-top: 12px; border-radius: 20px; }
+    
+    .model-selector { margin: 16px; }
+    select { width: 100%; padding: 12px; font-weight: 600; font-size: 0.8rem; background: #FFE8D6; border: 2px solid black; cursor: pointer; }
+    
+    .chat-main { flex: 1; display: flex; flex-direction: column; background: #FDF8F0; min-width: 0; height: 100vh; overflow: hidden; }
+    .chat-header { padding: 14px 24px; border-bottom: 2px solid #1e1b1a; background: linear-gradient(135deg, #F9EFE0, #F4E5D0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .chat-header h2 { font-weight: 800; font-size: 1.3rem; }
+    .badge-api { background: #1e1b1a; color: #FFD166; padding: 6px 12px; font-size: 0.65rem; font-weight: 700; border: 1px solid #FFD166; }
+    
+    .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .message { display: flex; max-width: 85%; animation: fadeSlide 0.3s ease; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(10px);} to { opacity: 1; transform: translateY(0);} }
+    .user-message { align-self: flex-end; justify-content: flex-end; }
+    .assistant-message { align-self: flex-start; }
+    .bubble { padding: 12px 18px; border: 2px solid #1e1b1a; box-shadow: 4px 4px 0 0 rgba(0,0,0,0.1); font-size: 0.9rem; line-height: 1.5; word-wrap: break-word; max-width: 100%; }
+    .user-message .bubble { background: linear-gradient(135deg, #FFE066, #FFD700); border-bottom-right-radius: 0; border-top-right-radius: 18px; border-bottom-left-radius: 18px; }
+    .assistant-message .bubble { background: #FFFFFF; border-top-left-radius: 0; border-top-right-radius: 18px; border-bottom-right-radius: 18px; }
+    .bubble table { display: block; overflow-x: auto; font-size: 0.75rem; border-collapse: collapse; width: 100%; margin: 10px 0; }
+    .bubble th, .bubble td { border: 1px solid black; padding: 6px 10px; text-align: left; }
+    .bubble pre { background: #1e1b1a; color: #FFE066; padding: 12px; overflow-x: auto; border-radius: 10px; margin: 10px 0; }
+    
+    .file-download-card { background: linear-gradient(135deg, #e8e0d0, #ddd0b8); border: 2px solid #1e1b1a; padding: 14px; margin-top: 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-radius: 12px; }
+    
+    .input-area { padding: 16px 20px; background: #F4EADB; border-top: 2px solid #1e1b1a; }
+    .input-group { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .input-wrapper { flex: 1; background: white; border: 2px solid black; display: flex; align-items: center; padding: 8px 14px; gap: 10px; }
+    .input-wrapper textarea { flex: 1; border: none; background: transparent; resize: none; font-size: 0.9rem; padding: 10px 0; max-height: 100px; min-height: 45px; width: 100%; outline: none; font-family: inherit; }
+    
+    .active-file-bar { margin-top: 12px; background: #1e1b1a; color: #FFE066; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-radius: 8px; }
+    .analysis-tag { background: #118AB2; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
+    
+    .loading-emoticon { display: inline-flex; align-items: center; gap: 10px; background: #FFF0D4; padding: 8px 16px; border-radius: 50px; border: 1px solid black; font-size: 1.1rem; }
+    .loading-spinner-custom { animation: bounce 0.6s infinite alternate; display: inline-block; }
+    @keyframes bounce { 0% { transform: translateY(0px); } 100% { transform: translateY(-6px); } }
+    
+    .sidebar-footer { padding: 16px; font-size: 0.7rem; color: #555; border-top: 1px solid #ccc; margin-top: auto; background: #F4EADB; }
+    
+    @media (max-width: 768px) {
+      .app-wrapper { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 8px; border-right: none; border-bottom: 2px solid #1e1b1a; }
+      .profile-area { width: calc(100% - 20px); margin: 8px; padding: 12px; }
+      .profile-name { font-size: 1.3rem; }
+      .model-selector { flex: 1; min-width: 180px; margin: 0 8px; }
+      .message { max-width: 95%; }
+      .input-group { flex-direction: column; }
+      .input-wrapper { width: 100%; }
+      .send-btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-wrapper">
+  <div class="sidebar">
+    <div class="profile-area neo-card">
+      <div class="profile-name">🤖 ARUL AI</div>
+      <div class="status"><span class="online-dot"></span> <span> Siap Membantu</span></div>
+      <div class="mood-text"><i class="fas fa-infinity"></i> Semua bisa! Cukup tanya</div>
+    </div>
+    <div class="model-selector">
+    <br>
+      <label><i class="fas fa-brain"></i> PILIH MODEL AI</label>
+      <select id="modelSelect">
+        <option value="kr/claude-opus-4.7">🧠 Claude Opus 4.7 (Rekomendasi)</option>
+        <option value="ag/gemini-3.1-pro-high">⭐ Gemini 3.1 Pro High</option>
+        <option value="ag/claude-opus-4-6-thinking">💭 Claude Opus 4.6 Thinking</option>
+        <option value="ag/claude-sonnet-4-6">⚡ Claude Sonnet 4.6</option>
+        <option value="cx/gpt-5.5">🚀 GPT 5.5 Ultimate</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="chat-main">
+    <div class="chat-header">
+      <h2><i class="fas fa-robot"></i> ARUL AI ·</h2>
+      <div class="badge-api"><i class="fas fa-brain"></i>BISMILLAH</div>
+    </div>
+    <div class="messages-container" id="messagesContainer">
+      <div class="message assistant-message">
+        <div class="bubble">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="font-size: 2.5rem;">🌟</div>
+            <div>
+              <strong style="font-size: 1.1rem;">Halo! Aku ARUL AI</strong><br>
+              <span class="analysis-tag"><i class="fas fa-infinity"></i> Tanpa batasan fungsi</span>
+            </div>
+          </div>
+          <br>
+          <strong>Cukup beri perintah, aku akan melakukan yang terbaik</strong><br><br>
+          💬 <strong>Coba sekarang:</strong> Upload file atau ketik perintah apapun!
+        </div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-group">
+        <div class="input-wrapper neo-card">
+          <i class="fas fa-pen-fancy" style="color:#118AB2;"></i>
+          <textarea id="userInput" rows="1" placeholder="Ketik apapun...."></textarea>
+          <button id="attachButton" class="attach-btn"><i class="fas fa-paperclip"></i> Upload</button>
+          <input type="file" id="fileInput" style="display:none" accept=".pdf,.xlsx,.xls,.csv,.docx,.pptx,.png,.jpg,.jpeg,.txt">
+        </div>
+        <button id="sendBtn" class="send-btn"><i class="fas fa-paper-plane"></i> Kirim</button>
+      </div>
+      <div id="activeFilePanel" style="display: none;" class="active-file-bar"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== KONFIGURASI ==========
+  const API_ENDPOINT = "https://api.ahwanulm.me/v1";
+  const API_KEY = "sk-fae1327aa9f2c80b-xtrat0-faf14a55";
+  let currentModel = "kr/claude-opus-4.7";
+  
+  let uploadedFile = null;
+  let conversationHistory = [{ role: "system", content: `Kamu adalah ARUL AI, Asisten Universal yang sangat cerdas dan fleksibel. Kamu bisa melakukan APAPUN yang diminta pengguna:
+
+  KEMAMPUAN UTAMA:
+  1. MEMBACA & MENGANALISIS FILE: PDF, Excel, Word, PPT, Gambar (OCR). Ekstrak konten dan jawab pertanyaan.
+  2. MEMBUAT FILE: DOC, PDF, XLSX, PPT berdasarkan deskripsi. Untuk membuat file, kembalikan JSON: {"fileType":"doc/pdf/xlsx/ppt","fileName":"nama","content":"isi"}.
+  3. MEREVISI FILE: Upload file lalu minta revisi.
+  4. ANALISIS DATA: Dari Excel/CSV, berikan statistik, insight, tren, rekomendasi.
+  5. PENERJEMAHAN: Terjemahkan teks/dokumen ke berbagai bahasa.
+  6. CODING: Buat kode Python, JavaScript, HTML, SQL, dll. Sertakan penjelasan.
+  7. SURAT & DOKUMEN RESMI: Surat lamaran, proposal, undangan, kontrak, dll.
+  8. PENJELASAN KONSEP: Jelaskan topik rumit dengan analogi sederhana dan contoh.
+  
+  Aturan Respons:
+  - Gunakan Bahasa Indonesia yang baik dan benar
+  - Respons dengan format MARKDOWN, gunakan tabel untuk data, gunakan code block untuk kode
+  - Jika membuat file, pastikan JSON valid
+  - Bersikap ramah, profesional, dan helpful seperti Claude AI
+  - Adaptif: lakukan sesuai perintah tanpa perlu konfirmasi ulang` }];
+  
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  
+  // ========== EKSTRAKSI FILE ==========
+  async function extractFileContent(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let text = '';
+      for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+      }
+      return `📄 FILE PDF: ${file.name}\nJUMLAH HALAMAN: ${pdf.numPages}\n\nKONTEN:\n${text.substring(0, 8000)}`;
+    }
+    if (['xlsx','xls','csv'].includes(ext)) {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer);
+      let result = `📊 FILE EXCEL: ${file.name}\nJUMLAH SHEET: ${workbook.SheetNames.length}\n\n`;
+      workbook.SheetNames.forEach(sheet => {
+        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 });
+        result += `=== SHEET: ${sheet} ===\n`;
+        if (data.length > 0) {
+          const headers = data[0] || [];
+          result += `KOLOM: ${headers.join(', ')}\n`;
+          result += `JUMLAH BARIS DATA: ${data.length - 1}\n`;
+          result += `PREVIEW (5 baris pertama):\n${JSON.stringify(data.slice(0, 6), null, 2)}\n`;
+        }
+        result += '\n';
+      });
+      return result.substring(0, 8000);
+    }
+    if (ext === 'docx') {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      return `📝 FILE WORD: ${file.name}\n\nKONTEN:\n${result.value.substring(0, 8000)}`;
+    }
+    if (ext === 'pptx') {
+      return `📽️ FILE POWERPOINT: ${file.name}\nUkuran: ${(file.size/1024).toFixed(1)} KB\n(Catatan: Untuk analisis terbaik, konversi ke PDF terlebih dahulu)`;
+    }
+    if (['png','jpg','jpeg','bmp','webp'].includes(ext)) {
+      const url = URL.createObjectURL(file);
+      try {
+        const { data: { text } } = await Tesseract.recognize(url, 'ind+eng');
+        URL.revokeObjectURL(url);
+        return `🖼️ FILE GAMBAR: ${file.name}\n\nHASIL OCR (TEKS DALAM GAMBAR):\n${text.substring(0, 5000) || '(Tidak ada teks terdeteksi)'}`;
+      } catch(err) {
+        URL.revokeObjectURL(url);
+        return `🖼️ FILE GAMBAR: ${file.name}\nUkuran: ${(file.size/1024).toFixed(1)} KB\n(Gagal OCR: ${err.message})`;
+      }
+    }
+    if (ext === 'txt') {
+      const text = await file.text();
+      return `📄 FILE TEKS: ${file.name}\n\nKONTEN:\n${text.substring(0, 8000)}`;
+    }
+    return `FILE: ${file.name}\nUkuran: ${(file.size/1024).toFixed(1)} KB`;
+  }
+  
+  // ========== GENERATE FILE ==========
+  function generateDocFile(content, filename) {
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filename}</title><style>body{font-family:Arial,sans-serif;padding:40px;max-width:800px;margin:0 auto;line-height:1.6;}h1{color:#2c3e50;}h2{color:#34495e;}table{border-collapse:collapse;width:100%;margin:15px 0;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background:#f5f5f5;}pre{background:#f4f4f4;padding:10px;overflow-x:auto;}code{font-family:monospace;}</style></head><body>${content}</body></html>`;
+    const blob = htmlDocx.asBlob(html);
+    return { url: URL.createObjectURL(blob), filename: `${filename}.docx`, type: 'docx' };
+  }
+  
+  function generatePDFFromContent(content, filename) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const plainText = content.replace(/<[^>]*>/g, '');
+    const lines = doc.splitTextToSize(plainText, 170);
+    let y = 20;
+    for (let line of lines) {
+      if (y > 280) { doc.addPage(); y = 20; }
+      doc.text(line, 15, y);
+      y += 7;
+    }
+    return { url: URL.createObjectURL(doc.output('blob')), filename: `${filename}.pdf`, type: 'pdf' };
+  }
+  
+  function generateExcelFile(data, filename) {
+    let wsData;
+    if (typeof data === 'string') {
+      try { wsData = JSON.parse(data); } catch(e) { wsData = [[data]]; }
+    } else {
+      wsData = data;
+    }
+    if (!Array.isArray(wsData[0])) wsData = [wsData];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data');
+    const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+    return { url: URL.createObjectURL(new Blob([buf], {type: 'application/octet-stream'})), filename: `${filename}.xlsx`, type: 'xlsx' };
+  }
+  
+  async function handleCreateFile(userMessage) {
+    showLoading("📝 AI sedang membuat file...");
+    const messages = [...conversationHistory, { role: "user", content: `BUAT FILE: ${userMessage}. Kembalikan JSON valid: {"fileType":"doc/pdf/xlsx/ppt","fileName":"nama_file","content":"isi_konten"}. Untuk Excel, content berupa array 2D. Untuk file lain, content berupa HTML atau markdown.` }];
+    try {
+      const res = await fetch(`${API_ENDPOINT}/chat/completions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 4000 })
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      let aiResponse = data.choices[0].message.content;
+      
+      let fileData = { fileType: 'doc', fileName: 'dokumen', content: aiResponse };
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { fileData = JSON.parse(jsonMatch[0]); } catch(e) {}
+      }
+      
+      let result;
+      if (fileData.fileType === 'xlsx' || userMessage.toLowerCase().includes('excel')) {
+        result = generateExcelFile(fileData.content || [[fileData.fileName], [fileData.content]], fileData.fileName);
+      } else if (fileData.fileType === 'pdf' || userMessage.toLowerCase().includes('pdf')) {
+        result = generatePDFFromContent(fileData.content, fileData.fileName);
+      } else {
+        result = generateDocFile(fileData.content, fileData.fileName);
+      }
+      
+      hideLoading();
+      const icon = result.type === 'docx' ? 'fa-file-word' : (result.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-excel');
+      addMessageToUI('assistant', `✅ **File "${result.filename}" berhasil dibuat!**\n\n<div class="file-download-card"><i class="fas ${icon} fa-2x"></i><div><strong>${result.filename}</strong><br>Klik tombol di bawah untuk menyimpan</div><a href="${result.url}" download="${result.filename}" class="download-btn"><i class="fas fa-download"></i> Download File</a></div>\n\n📄 **Preview:**\n${aiResponse.substring(0, 800)}`);
+    } catch(err) {
+      hideLoading();
+      addMessageToUI('assistant', `❌ Gagal membuat file: ${err.message}`);
+    }
+  }
+  
+  async function analyzeFile(file, question) {
+    showLoading("🔍 AI sedang membaca & menganalisis file...");
+    const content = await extractFileContent(file);
+    const messages = [...conversationHistory, { role: "user", content: `FILE: ${file.name}\n\nKONTEN FILE:\n${content}\n\nPERINTAH: ${question}\n\nLakukan sesuai perintah. Jika diminta ringkasan, berikan ringkasan. Jika diminta analisis data, berikan insight. Jika diminta revisi, hasilkan file revisi dalam JSON.` }];
+    try {
+      const res = await fetch(`${API_ENDPOINT}/chat/completions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 3000 })
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const reply = data.choices[0].message.content;
+      hideLoading();
+      addMessageToUI('assistant', reply);
+      conversationHistory.push({ role: "user", content: `[FILE: ${file.name}] ${question}` }, { role: "assistant", content: reply });
+    } catch(err) {
+      hideLoading();
+      addMessageToUI('assistant', `❌ Error: ${err.message}`);
+    }
+  }
+  
+  async function sendRegularMessage(question) {
+    showLoading("💭 AI sedang berpikir...");
+    const messages = [...conversationHistory, { role: "user", content: question }];
+    try {
+      const res = await fetch(`${API_ENDPOINT}/chat/completions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2500 })
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const reply = data.choices[0].message.content;
+      hideLoading();
+      addMessageToUI('assistant', reply);
+      conversationHistory.push({ role: "user", content: question }, { role: "assistant", content: reply });
+      if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-25);
+    } catch(err) {
+      hideLoading();
+      addMessageToUI('assistant', `❌ Error: ${err.message}. Cek koneksi atau coba model lain.`);
+    }
+  }
+  
+  // ========== UI HELPERS ==========
+  const messagesContainer = document.getElementById('messagesContainer');
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const attachBtn = document.getElementById('attachButton');
+  const fileInput = document.getElementById('fileInput');
+  
+  function scrollToBottom() { messagesContainer.scrollTop = messagesContainer.scrollHeight; }
+  function escapeHtml(str) { return str?.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) || ''; }
+  function renderMarkdown(text) { 
+    try { 
+      let html = marked.parse(text); 
+      setTimeout(() => document.querySelectorAll('pre code').forEach(hljs.highlightElement), 100); 
+      return html; 
+    } catch(e) { return text.replace(/\n/g, '<br>'); } 
+  }
+  
+  function addMessageToUI(role, content) {
+    const div = document.createElement('div');
+    div.className = `message ${role === 'user' ? 'user-message' : 'assistant-message'}`;
+    div.innerHTML = `<div class="bubble">${role === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}</div>`;
+    messagesContainer.appendChild(div);
+    scrollToBottom();
+  }
+  
+  let loadingDiv = null, loadingInterval = null;
+  const emoticons = ["🤔", "🧐", "📖", "🔍", "🤖✨", "📊", "✏️", "💭", "🚀", "⭐", "💡", "🎯"];
+  function showLoading(text = "Memproses...") {
+    if (loadingDiv) return;
+    loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message assistant-message';
+    let idx = 0;
+    const update = () => { if(loadingDiv) loadingDiv.innerHTML = `<div class="bubble"><div class="loading-emoticon"><span class="loading-spinner-custom">${emoticons[idx%emoticons.length]}</span> ${text}</div></div>`; idx++; };
+    update();
+    messagesContainer.appendChild(loadingDiv);
+    scrollToBottom();
+    loadingInterval = setInterval(update, 600);
+  }
+  function hideLoading() { if(loadingInterval) clearInterval(loadingInterval); if(loadingDiv) loadingDiv.remove(); loadingDiv = null; }
+  
+  attachBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    uploadedFile = file;
+    const panel = document.getElementById('activeFilePanel');
+    panel.style.display = 'flex';
+    panel.innerHTML = `<span><i class="fas fa-file"></i> <strong>${file.name}</strong> sudah diupload</span><button id="removeFileBtn" class="remove-file-btn"><i class="fas fa-times"></i> Hapus</button>`;
+    document.getElementById('removeFileBtn')?.addEventListener('click', () => { uploadedFile = null; panel.style.display = 'none'; addMessageToUI('assistant', '🗑️ File dihapus. Upload lagi jika perlu.'); });
+    addMessageToUI('user', `📎 Upload file: ${file.name}`);
+    await analyzeFile(file, "Buat ringkasan singkat isi file ini dan beri tahu aku bisa bertanya apa saja tentang file ini.");
+    fileInput.value = '';
+  });
+  
+  async function sendMessage() {
+    const text = userInput.value.trim();
+    if (!text) { alert("Ketik perintah!"); return; }
+    addMessageToUI('user', text);
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    
+    const createKeywords = ['buat', 'buatkan', 'generate', 'bikin', 'create', 'buat file'];
+    const isCreate = createKeywords.some(k => text.toLowerCase().includes(k)) && 
+                     (text.toLowerCase().includes('makalah') || text.toLowerCase().includes('excel') || 
+                      text.toLowerCase().includes('presentasi') || text.toLowerCase().includes('ppt') || 
+                      text.toLowerCase().includes('surat') || text.toLowerCase().includes('laporan') ||
+                      text.toLowerCase().includes('dokumen') || text.toLowerCase().includes('proposal'));
+    
+    if (isCreate) {
+      await handleCreateFile(text);
+    } else if (uploadedFile) {
+      await analyzeFile(uploadedFile, text);
+    } else {
+      await sendRegularMessage(text);
+    }
+  }
+  
+  sendBtn.addEventListener('click', sendMessage);
+  userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+  userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(100, this.scrollHeight) + 'px'; });
+  modelSelect.addEventListener('change', (e) => { currentModel = e.target.value; addMessageToUI('assistant', `🔄 Model AI diubah ke ${currentModel}`); });
+  
+  document.getElementById('newChatBtn')?.addEventListener('click', () => {
+    messagesContainer.innerHTML = '';
+    conversationHistory = [{ role: "system", content: conversationHistory[0].content }];
+    uploadedFile = null;
+    document.getElementById('activeFilePanel').style.display = 'none';
+    addMessageToUI('assistant', "✨ Chat baru! Kirim perintah apapun, aku akan bantu.");
+  });
+  document.getElementById('clearChatBtn')?.addEventListener('click', () => {
+    messagesContainer.innerHTML = '';
+    conversationHistory = [{ role: "system", content: conversationHistory[0].content }];
+    addMessageToUI('assistant', "🧹 Riwayat chat dihapus.");
+  });
+  
+  scrollToBottom();
+</script>
+</body>
+</html>

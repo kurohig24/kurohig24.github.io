@@ -155,17 +155,11 @@
       padding: 0;
     }
     
-    /* Minimized state untuk desktop (icon saja) - OPSIONAL, TAPI KITA PAKAI HIDDEN SAJA AGAR SIMPLE */
-    /* Tapi biar konsisten dengan permintaan hide/show, kita fokus ke hidden-sidebar */
-    
     .sidebar.hidden-sidebar .sidebar-content {
       display: none;
     }
     
-    /* Untuk tombol toggle di header agar tetap terlihat jika sidebar hidden, kita tempatkan di luar, tapi di dalam sidebar tetap ada tombolnya? 
-       Agar user bisa show kembali, kita tambahkan tombol floating atau di main header. Kita akan tambahkan tombol Show/Hide di header chat area juga. */
-    
-    /* Mobile styles */
+    /* Mobile styles - OPTIMIZED */
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
@@ -176,15 +170,19 @@
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 100;
         width: 280px !important;
+        min-width: 280px !important;
+        background: rgba(0, 0, 0, 0.98);
+        backdrop-filter: blur(16px);
       }
       
       .sidebar.mobile-open {
         transform: translateX(0);
       }
       
+      /* Saat hidden di mobile, tetap sembunyi */
       .sidebar.hidden-sidebar {
         transform: translateX(-100%);
-        width: 280px !important; /* biar konsisten saat hidden di mobile */
+        width: 280px !important;
         min-width: 280px !important;
         opacity: 1;
       }
@@ -195,7 +193,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.8);
         z-index: 99;
         display: none;
         backdrop-filter: blur(4px);
@@ -205,23 +203,92 @@
         display: block;
       }
       
+      /* Output area fullscreen di mobile */
       .output-area.open { 
         width: 100%; 
         position: fixed; 
         right: 0; 
         top: 0; 
         height: 100%; 
-        z-index: 60; 
+        z-index: 200; 
         border-left: none; 
-        border-right: 2px solid #8b5cf6; 
+        border-right: 2px solid #8b5cf6;
+        background: #0a0a0a;
       }
       
       .output-area.open .close-output-mobile { 
-        display: block; 
+        display: block !important;
       }
       
       .close-output-mobile { 
-        display: none; 
+        display: none;
+      }
+      
+      /* Header responsif */
+      .chat-area .bg-\[\#0a0a0a\]\/80 {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 12px;
+      }
+      
+      /* Model select dan button di header agar tidak terpotong */
+      .chat-area .bg-\[\#0a0a0a\]\/80 > div:last-child {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        margin-top: 4px;
+      }
+      
+      /* Input area tidak terlalu besar */
+      #userInput {
+        font-size: 14px;
+      }
+      
+      /* Tombol-tombol aksi di input */
+      .p-3 {
+        padding: 8px 12px;
+      }
+      
+      /* Pesan chat lebih rapi */
+      .max-w-\[85\%\] {
+        max-width: 90%;
+      }
+      
+      .rounded-2xl {
+        border-radius: 18px;
+      }
+      
+      /* File preview scroll horizontal */
+      #filePreviewList {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      
+      /* Memastikan container messages tidak ke-tutup keyboard */
+      #messagesContainer {
+        padding-bottom: 80px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      /* Extra small devices */
+      .chat-area .bg-\[\#0a0a0a\]\/80 > div:first-child {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .chat-area .bg-\[\#0a0a0a\]\/80 > div:last-child {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .code-buttons-bar button {
+        padding: 4px 8px;
+        font-size: 10px;
+      }
+      
+      .text-xs {
+        font-size: 11px;
       }
     }
     
@@ -269,7 +336,7 @@
     
     .gradient-text { background: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientBg 3s ease infinite; }
     
-    .context-menu { position: fixed; background: #0a0a0a; border: 1px solid #8b5cf6; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100; overflow: hidden; min-width: 160px; }
+    .context-menu { position: fixed; background: #0a0a0a; border: 1px solid #8b5cf6; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 1000; overflow: hidden; min-width: 160px; }
     .context-menu-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: all 0.1s; }
     .context-menu-item:hover { background: rgba(139, 92, 246, 0.2); }
     .file-card { transition: all 0.2s; }
@@ -331,6 +398,14 @@
       transform: scale(1.05);
       background: rgba(139, 92, 246, 0.3);
     }
+    
+    /* Safe area untuk notch */
+    @supports (padding: max(0px)) {
+      .sidebar, .output-area.open {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
   </style>
   
   <script>
@@ -351,9 +426,8 @@
 
 <div class="split-layout">
   
-  <!-- Sidebar dengan hide/show button internal (tetap ada tombol di dalamnya, tapi kita tambahkan juga di header utama) -->
+  <!-- Sidebar -->
   <div id="sidebar" class="sidebar">
-    <!-- Sidebar Header with Hide/Show Button (di dalam sidebar) -->
     <div class="p-3 border-b border-neon-purple/20 flex items-center justify-between">
       <div class="flex items-center gap-2 sidebar-content">
         <i class="fas fa-terminal text-neon-purple text-sm"></i>
@@ -399,27 +473,27 @@
           <i class="fas fa-terminal text-neon-purple text-sm animate-pulse"></i>
           <span class="text-sm text-gray-300">kiro@cli:~</span>
         </div>
-        <div class="hidden md:block text-xs gradient-text font-bold">[KIRO AI v8.0 · Smooth Typing + Hide/Show Sidebar]</div>
+        <div class="hidden md:block text-xs gradient-text font-bold">[KIRO AI v8.0 · Mobile Optimized]</div>
       </div>
-      <div class="flex items-center gap-2 text-xs">
+      <div class="flex items-center gap-2 text-xs flex-wrap">
         <button id="stopChatBtn" class="stop-chat-btn bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" style="display: none;">
           <i class="fas fa-stop-circle mr-1"></i> Stop
         </button>
         <button id="toggleOutputBtn" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
-          <i class="fas fa-terminal mr-1"></i> Show Output
+          <i class="fas fa-terminal mr-1"></i> Output
         </button>
         <div class="flex items-center gap-1 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1">
           <i class="fas fa-microchip text-neon-cyan"></i>
-          <select id="modelSelect" class="bg-transparent text-gray-300 outline-none text-xs cursor-pointer">
-            <option value="kr/claude-opus-4.7">🧠 claude-opus-4.7</option>
-            <option value="ag/gemini-3.1-pro-high">⭐ gemini-3.1-pro</option>
-            <option value="ag/claude-sonnet-4-6">⚡ claude-sonnet-4.6</option>
+          <select id="modelSelect" class="bg-transparent text-gray-300 outline-none text-xs cursor-pointer max-w-[100px]">
+            <option value="kr/claude-opus-4.7">🧠 claude</option>
+            <option value="ag/gemini-3.1-pro-high">⭐ gemini</option>
+            <option value="ag/claude-sonnet-4-6">⚡ sonnet</option>
             <option value="cx/gpt-5.5">🚀 gpt-5.5</option>
           </select>
         </div>
         <div class="flex items-center gap-1 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1">
           <i class="fas fa-database text-neon-orange"></i>
-          <span class="text-gray-400" id="fileCount">0 files</span>
+          <span class="text-gray-400" id="fileCount">0</span>
         </div>
         <button id="newChatBtn" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-plus mr-1"></i> new
@@ -434,10 +508,10 @@
           <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-neon-purple to-neon-pink flex items-center justify-center animate-pulse">
             <i class="fas fa-terminal text-2xl text-white"></i>
           </div>
-          <p class="text-sm text-gray-400">terminal-based AI assistant · optimized v8.0</p>
+          <p class="text-sm text-gray-400">terminal-based AI assistant · mobile ready</p>
           <div class="flex gap-2 justify-center flex-wrap mt-2">
             <button class="quick-cmd bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">📁 upload</button>
-            <button class="quick-cmd bg-gradient-to-r from-neon-green/20 to-neon-purple/20 border border-neon-green/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">▶ run code</button>
+            <button class="quick-cmd bg-gradient-to-r from-neon-green/20 to-neon-purple/20 border border-neon-green/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">▶ run</button>
             <button class="quick-cmd bg-gradient-to-r from-neon-orange/20 to-neon-pink/20 border border-neon-orange/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">📌 pin</button>
           </div>
         </div>
@@ -477,7 +551,7 @@
           <span class="text-gray-500">$</span>
         </div>
         <div class="flex-1 relative">
-          <textarea id="userInput" rows="1" placeholder="ask about files, type a command, or request code..." class="w-full bg-transparent border-none outline-none text-gray-200 text-sm resize-none font-mono py-2 placeholder:text-gray-600"></textarea>
+          <textarea id="userInput" rows="1" placeholder="ask or type command..." class="w-full bg-transparent border-none outline-none text-gray-200 text-sm resize-none font-mono py-2 placeholder:text-gray-600"></textarea>
         </div>
         <button id="attachBtn" class="p-2 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition">
           <i class="fas fa-paperclip text-neon-purple text-sm"></i>
@@ -488,10 +562,10 @@
         </button>
       </div>
       <div class="px-3 pb-2 text-[10px] text-gray-600 flex gap-4 flex-wrap">
-        <span><i class="fas fa-upload text-neon-purple"></i> pdf/excel/word/image</span>
-        <span><i class="fas fa-play text-neon-green"></i> click ▶ on code to run</span>
-        <span><i class="fas fa-copy text-neon-cyan"></i> copy code</span>
-        <span><i class="fas fa-compress text-neon-orange"></i> hide sidebar for more space</span>
+        <span><i class="fas fa-upload text-neon-purple"></i> pdf/excel</span>
+        <span><i class="fas fa-play text-neon-green"></i> ▶ run code</span>
+        <span><i class="fas fa-copy text-neon-cyan"></i> copy</span>
+        <span><i class="fas fa-arrow-left text-neon-orange"></i> hide sidebar</span>
       </div>
     </div>
   </div>
@@ -502,21 +576,20 @@
       <div class="flex items-center gap-2">
         <i class="fas fa-terminal text-neon-purple"></i>
         <span class="text-sm font-bold">Output Console</span>
-        <span class="text-xs text-gray-500">— code execution result</span>
       </div>
       <div class="flex gap-2">
         <button id="clearOutputBtn" class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded bg-black/50"><i class="fas fa-trash-alt"></i> Clear</button>
-        <button id="closeOutputBtn" class="text-gray-400 hover:text-red-400 hidden close-output-mobile"><i class="fas fa-times"></i></button>
+        <button id="closeOutputBtn" class="close-output-mobile text-gray-400 hover:text-red-400 px-2 py-1 rounded bg-black/50"><i class="fas fa-times"></i> Close</button>
       </div>
     </div>
     <div id="outputContent" class="output-content">
-      <div class="text-gray-500 text-center py-10">▶ Click "Show Output" or run code to see results here</div>
+      <div class="text-gray-500 text-center py-10">▶ Click "Output" or run code to see results</div>
     </div>
   </div>
 </div>
 
 <script>
-  // ========== KONFIGURASI ==========
+  // ========== KONFIGURASI & FUNGSI UTAMA (SAMA SEPERTI SEBELUMNYA) ==========
   const API_ENDPOINT = "https://api.ahwanulm.me/v1";
   const API_KEY = "sk-fae1327aa9f2c80b-xtrat0-faf14a55";
   let currentModel = "kr/claude-opus-4.7";
@@ -524,17 +597,14 @@
   let uploadedFiles = [];
   let pyodide = null;
   let isTyping = false;
-  let currentAbortController = null; // Untuk stop chat
+  let currentAbortController = null;
   let isGenerating = false;
-  
-  // Sidebar hide/show state (disembunyikan total)
   let isSidebarHidden = false;
   
-  // Fungsi untuk hide sidebar (total collapse)
+  // Sidebar functions
   function hideSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (window.innerWidth <= 768) {
-      // Mobile: cukup close
       closeMobileSidebar();
       isSidebarHidden = true;
     } else {
@@ -544,11 +614,9 @@
     localStorage.setItem('sidebarHidden', 'true');
   }
   
-  // Fungsi untuk show sidebar
   function showSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (window.innerWidth <= 768) {
-      // Mobile: open
       openMobileSidebar();
       isSidebarHidden = false;
     } else {
@@ -558,16 +626,11 @@
     localStorage.setItem('sidebarHidden', 'false');
   }
   
-  // Toggle sidebar hide/show
   function toggleSidebarHideShow() {
-    if (isSidebarHidden) {
-      showSidebar();
-    } else {
-      hideSidebar();
-    }
+    if (isSidebarHidden) showSidebar();
+    else hideSidebar();
   }
   
-  // Load sidebar state dari localStorage
   function loadSidebarState() {
     const saved = localStorage.getItem('sidebarHidden');
     const isMobile = window.innerWidth <= 768;
@@ -576,7 +639,6 @@
         document.getElementById('sidebar').classList.add('hidden-sidebar');
         isSidebarHidden = true;
       } else {
-        // Di mobile, state hidden berarti sidebar tertutup
         closeMobileSidebar();
         isSidebarHidden = true;
       }
@@ -585,22 +647,17 @@
         document.getElementById('sidebar').classList.remove('hidden-sidebar');
         isSidebarHidden = false;
       } else {
-        // Default di mobile terbuka? Tidak, lebih baik tertutup agar tidak mengganggu, tapi ikuti state
-        if (saved === 'false') openMobileSidebar();
-        else closeMobileSidebar();
-        isSidebarHidden = (saved === 'true');
+        isSidebarHidden = false;
       }
     }
   }
   
-  // Mobile sidebar functions
   function openMobileSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     sidebar.classList.add('mobile-open');
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
-    // Saat manual open via tombol, update state hidden jadi false
     isSidebarHidden = false;
     localStorage.setItem('sidebarHidden', 'false');
   }
@@ -611,40 +668,24 @@
     sidebar.classList.remove('mobile-open');
     overlay.classList.remove('active');
     document.body.style.overflow = '';
-    // Saat manual close, update state hidden jadi true
     isSidebarHidden = true;
     localStorage.setItem('sidebarHidden', 'true');
   }
   
-  // Stop chat generation
   function stopChatGeneration() {
-    if (currentAbortController) {
-      currentAbortController.abort();
-      currentAbortController = null;
-    }
-    isGenerating = false;
-    isTyping = false;
-    
-    // Hide stop button
+    if (currentAbortController) { currentAbortController.abort(); currentAbortController = null; }
+    isGenerating = false; isTyping = false;
     document.getElementById('stopChatBtn').style.display = 'none';
-    
-    // Hide thinking process
     endThinkingProcess();
-    
-    // Add stop message
-    addMessageWithTyping('assistant', '⚠️ **Chat generation stopped by user.**\n\nYou can continue with a new question or adjust your input.');
-    
-    // Re-enable send button
+    addMessageWithTyping('assistant', '⚠️ **Chat generation stopped by user.**');
     document.getElementById('sendBtn').disabled = false;
     document.getElementById('sendBtn').style.opacity = '1';
   }
   
-  // Show output message helper
   function showOutputMessage(message, type = "info") {
     const outputContent = document.getElementById('outputContent');
     const outputArea = document.getElementById('outputArea');
     outputArea.classList.add('open');
-    
     const messageDiv = document.createElement('div');
     messageDiv.className = `output-${type}`;
     messageDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>${message}`;
@@ -652,7 +693,6 @@
     outputContent.scrollTop = outputContent.scrollHeight;
   }
   
-  // Initialize Pyodide
   async function initPyodide() {
     if (!pyodide) {
       showOutputMessage("Loading Python environment...", "warning");
@@ -662,725 +702,130 @@
     return pyodide;
   }
   
-  // Run Code Function
   async function runCode(code, language) {
-    console.log("Running code:", language, code.substring(0, 100));
     const outputContent = document.getElementById('outputContent');
     const outputArea = document.getElementById('outputArea');
-    
-    // Open output panel
     outputArea.classList.add('open');
-    
-    // Create execution container
     const executionDiv = document.createElement('div');
     executionDiv.className = 'mb-4';
     executionDiv.innerHTML = `<div class="text-yellow-400 mb-2"><i class="fas fa-spinner fa-spin"></i> Running ${language} code...</div>`;
     outputContent.appendChild(executionDiv);
     outputContent.scrollTop = outputContent.scrollHeight;
-    
     try {
-      let result = '';
-      let executionTime = Date.now();
-      
+      let result = ''; let executionTime = Date.now();
       if (language === 'javascript' || language === 'js') {
         let logs = [];
-        const originalLog = console.log;
-        const originalError = console.error;
-        const originalWarn = console.warn;
-        
-        console.log = (...args) => logs.push(args.map(arg => {
-          try {
-            if (typeof arg === 'object') return JSON.stringify(arg, null, 2);
-            return String(arg);
-          } catch {
-            return String(arg);
-          }
-        }).join(' '));
+        const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
+        console.log = (...args) => logs.push(args.map(arg => { try { if (typeof arg === 'object') return JSON.stringify(arg, null, 2); return String(arg); } catch { return String(arg); } }).join(' '));
         console.error = (...args) => logs.push(`[ERROR] ${args.join(' ')}`);
         console.warn = (...args) => logs.push(`[WARN] ${args.join(' ')}`);
-        
-        try {
-          const asyncFunc = new Function('return (async () => { try { ' + code + ' } catch(e) { console.error(e.message); } })()');
-          await asyncFunc();
-          result = logs.join('\n');
-          if (!result) result = '✓ Code executed successfully (no console output)';
-        } catch (err) {
-          result = `Error: ${err.message}`;
-        }
-        
-        console.log = originalLog;
-        console.error = originalError;
-        console.warn = originalWarn;
-        
+        try { const asyncFunc = new Function('return (async () => { try { ' + code + ' } catch(e) { console.error(e.message); } })()'); await asyncFunc(); result = logs.join('\n'); if (!result) result = '✓ Code executed successfully (no console output)'; } catch (err) { result = `Error: ${err.message}`; }
+        console.log = originalLog; console.error = originalError; console.warn = originalWarn;
         executionTime = Date.now() - executionTime;
-        executionDiv.innerHTML = `
-          <div class="output-success">
-            <i class="fas fa-check-circle mr-2"></i>
-            JavaScript execution completed in ${executionTime}ms
-          </div>
-          <pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>
-        `;
-      } 
-      else if (language === 'python' || language === 'py') {
+        executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> JavaScript execution completed in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>`;
+      } else if (language === 'python' || language === 'py') {
         await initPyodide();
         try {
-          pyodide.runPython(`
-import sys
-from io import StringIO
-sys.stdout = StringIO()
-sys.stderr = StringIO()
-`);
+          pyodide.runPython(`import sys\nfrom io import StringIO\nsys.stdout = StringIO()\nsys.stderr = StringIO()`);
           await pyodide.runPythonAsync(code);
           const output = pyodide.runPython('sys.stdout.getvalue()');
           const error = pyodide.runPython('sys.stderr.getvalue()');
           result = output || (error || '✓ Code executed successfully (no output)');
           if (error) result = `Output:\n${output}\n\nError:\n${error}`;
-          
           executionTime = Date.now() - executionTime;
-          executionDiv.innerHTML = `
-            <div class="output-success">
-              <i class="fas fa-check-circle mr-2"></i>
-              Python execution completed in ${executionTime}ms
-            </div>
-            <pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>
-          `;
-        } catch (err) {
-          executionDiv.innerHTML = `
-            <div class="output-error">
-              <i class="fas fa-exclamation-triangle mr-2"></i>
-              Python Error: ${escapeHtml(err.message)}
-            </div>
-          `;
-        }
-      }
-      else if (language === 'html') {
-        const iframe = document.createElement('iframe');
-        iframe.sandbox = 'allow-same-origin allow-scripts';
-        iframe.style.width = '100%';
-        iframe.style.height = '400px';
-        iframe.style.border = '1px solid #8b5cf6';
-        iframe.style.borderRadius = '8px';
-        iframe.style.background = 'white';
-        iframe.srcdoc = code;
-        
+          executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> Python execution completed in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>`;
+        } catch (err) { executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Python Error: ${escapeHtml(err.message)}</div>`; }
+      } else if (language === 'html') {
+        const iframe = document.createElement('iframe'); iframe.sandbox = 'allow-same-origin allow-scripts'; iframe.style.width = '100%'; iframe.style.height = '400px'; iframe.style.border = '1px solid #8b5cf6'; iframe.style.borderRadius = '8px'; iframe.style.background = 'white'; iframe.srcdoc = code;
         executionTime = Date.now() - executionTime;
-        executionDiv.innerHTML = `
-          <div class="output-success">
-            <i class="fas fa-check-circle mr-2"></i>
-            HTML rendered in ${executionTime}ms
-          </div>
-        `;
-        executionDiv.appendChild(iframe);
-      }
-      else if (language === 'css') {
-        const styleId = 'dynamic-css-' + Date.now();
-        let style = document.getElementById(styleId);
-        if (!style) {
-          style = document.createElement('style');
-          style.id = styleId;
-          document.head.appendChild(style);
-        }
-        style.textContent = code;
-        
+        executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> HTML rendered in ${executionTime}ms</div>`; executionDiv.appendChild(iframe);
+      } else if (language === 'css') {
+        const styleId = 'dynamic-css-' + Date.now(); let style = document.getElementById(styleId); if (!style) { style = document.createElement('style'); style.id = styleId; document.head.appendChild(style); } style.textContent = code;
         executionTime = Date.now() - executionTime;
-        executionDiv.innerHTML = `
-          <div class="output-success">
-            <i class="fas fa-check-circle mr-2"></i>
-            CSS applied successfully in ${executionTime}ms
-          </div>
-          <pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>
-        `;
-      }
-      else {
-        executionDiv.innerHTML = `
-          <div class="output-error">
-            <i class="fas fa-exclamation-triangle mr-2"></i>
-            Language "${language}" not supported. Supported: javascript, python, html, css
-          </div>
-        `;
-      }
-    } catch (err) {
-      executionDiv.innerHTML = `
-        <div class="output-error">
-          <i class="fas fa-exclamation-triangle mr-2"></i>
-          Execution Error: ${escapeHtml(err.message)}
-        </div>
-      `;
-    }
+        executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> CSS applied successfully in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>`;
+      } else { executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Language "${language}" not supported.</div>`; }
+    } catch (err) { executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Execution Error: ${escapeHtml(err.message)}</div>`; }
     outputContent.scrollTop = outputContent.scrollHeight;
   }
   
-  // Function to add buttons to code blocks - buttons at BOTTOM
   function addButtonsToCodeBlocks() {
-    console.log("Adding buttons to code blocks...");
-    const allPres = document.querySelectorAll('#messagesContainer pre');
-    
-    allPres.forEach(pre => {
+    document.querySelectorAll('#messagesContainer pre').forEach(pre => {
       if (pre.parentElement.classList.contains('code-block-wrapper')) return;
-      
-      const code = pre.querySelector('code');
-      if (!code) return;
-      
-      const wrapper = document.createElement('div');
-      wrapper.className = 'code-block-wrapper';
-      
-      let language = 'javascript';
-      const classMatch = code.className.match(/language-(\w+)/);
-      if (classMatch) {
-        language = classMatch[1];
-      }
-      
-      const buttonsBar = document.createElement('div');
-      buttonsBar.className = 'code-buttons-bar';
-      
-      const copyBtn = document.createElement('button');
-      copyBtn.className = 'copy-code-btn';
-      copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code';
-      copyBtn.onclick = async (e) => {
-        e.stopPropagation();
-        await navigator.clipboard.writeText(code.textContent);
-        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code'; }, 2000);
-      };
-      
-      const runBtn = document.createElement('button');
-      runBtn.className = 'run-code-btn';
-      runBtn.innerHTML = '<i class="fas fa-play"></i> Run Code';
-      runBtn.onclick = (e) => {
-        e.stopPropagation();
-        console.log("Run button clicked for language:", language);
-        runCode(code.textContent, language);
-      };
-      
-      buttonsBar.appendChild(copyBtn);
-      buttonsBar.appendChild(runBtn);
-      
-      pre.parentNode.insertBefore(wrapper, pre);
-      wrapper.appendChild(pre);
-      wrapper.appendChild(buttonsBar);
+      const code = pre.querySelector('code'); if (!code) return;
+      const wrapper = document.createElement('div'); wrapper.className = 'code-block-wrapper';
+      let language = 'javascript'; const classMatch = code.className.match(/language-(\w+)/); if (classMatch) language = classMatch[1];
+      const buttonsBar = document.createElement('div'); buttonsBar.className = 'code-buttons-bar';
+      const copyBtn = document.createElement('button'); copyBtn.className = 'copy-code-btn'; copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+      copyBtn.onclick = async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(code.textContent); copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000); };
+      const runBtn = document.createElement('button'); runBtn.className = 'run-code-btn'; runBtn.innerHTML = '<i class="fas fa-play"></i> Run';
+      runBtn.onclick = (e) => { e.stopPropagation(); runCode(code.textContent, language); };
+      buttonsBar.appendChild(copyBtn); buttonsBar.appendChild(runBtn);
+      pre.parentNode.insertBefore(wrapper, pre); wrapper.appendChild(pre); wrapper.appendChild(buttonsBar);
     });
   }
   
-  // Smooth typing effect
-  async function typeMessageToElement(element, fullText, speed = 2) {
-    if (isTyping) return;
-    isTyping = true;
-    
-    let i = 0;
-    element.innerHTML = '';
-    const textContainer = document.createElement('div');
-    textContainer.className = 'typing-code-container message-content';
-    element.appendChild(textContainer);
-    
-    const chunkSize = 2;
-    const chunks = [];
-    while (i < fullText.length) {
-      chunks.push(fullText.slice(i, i + chunkSize));
-      i += chunkSize;
-    }
-    
-    for (const chunk of chunks) {
-      if (!isGenerating) {
-        isTyping = false;
-        return;
-      }
-      
-      const span = document.createElement('span');
-      span.className = 'typing-chunk';
-      span.textContent = chunk;
-      textContainer.appendChild(span);
-      
-      const container = document.getElementById('messagesContainer');
-      container.scrollTop = container.scrollHeight;
-      
-      let waitTime = speed;
-      if (chunk === '\n') waitTime = speed * 2;
-      if (chunk === ' ') waitTime = speed / 2;
-      
-      await new Promise(r => setTimeout(r, waitTime));
-    }
-    
-    isTyping = false;
-    
-    const parsedHtml = marked.parse(fullText);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = parsedHtml;
-    
-    element.innerHTML = tempDiv.innerHTML;
-    
-    element.querySelectorAll('pre code').forEach(block => {
-      hljs.highlightElement(block);
-    });
-    
-    setTimeout(() => {
-      addButtonsToCodeBlocks();
-    }, 50);
-  }
+  async function typeMessageToElement(element, fullText, speed = 2) { if (isTyping) return; isTyping = true; let i = 0; element.innerHTML = ''; const textContainer = document.createElement('div'); textContainer.className = 'typing-code-container message-content'; element.appendChild(textContainer); const chunkSize = 2; const chunks = []; while (i < fullText.length) { chunks.push(fullText.slice(i, i + chunkSize)); i += chunkSize; } for (const chunk of chunks) { if (!isGenerating) { isTyping = false; return; } const span = document.createElement('span'); span.className = 'typing-chunk'; span.textContent = chunk; textContainer.appendChild(span); const container = document.getElementById('messagesContainer'); container.scrollTop = container.scrollHeight; let waitTime = speed; if (chunk === '\n') waitTime = speed * 2; if (chunk === ' ') waitTime = speed / 2; await new Promise(r => setTimeout(r, waitTime)); } isTyping = false; const parsedHtml = marked.parse(fullText); const tempDiv = document.createElement('div'); tempDiv.innerHTML = parsedHtml; element.innerHTML = tempDiv.innerHTML; element.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); }); setTimeout(() => { addButtonsToCodeBlocks(); }, 50); }
   
-  // Thinking process
-  function startThinkingProcess(hasFile = false) {
-    const container = document.getElementById('thinkingProcess');
-    const step1 = document.getElementById('step1');
-    const step2 = document.getElementById('step2');
-    const step3 = document.getElementById('step3');
-    const step4 = document.getElementById('step4');
-    
-    container.classList.remove('hidden');
-    step1.classList.remove('hidden', 'completed');
-    step2.classList.add('hidden');
-    step3.classList.add('hidden');
-    step4.classList.add('hidden');
-    step1.querySelector('i').className = 'fas fa-circle-notch fa-spin';
-    
-    if (hasFile) {
-      setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step2.classList.remove('hidden'); step2.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400);
-      setTimeout(() => { if(isGenerating) { step2.querySelector('i').className = 'fas fa-check-circle'; step2.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800);
-      setTimeout(() => { if(isGenerating) { step3.querySelector('i').className = 'fas fa-check-circle'; step3.classList.add('completed'); step4.classList.remove('hidden'); step4.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 1200);
-    } else {
-      setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400);
-      setTimeout(() => { if(isGenerating) { step3.querySelector('i').className = 'fas fa-check-circle'; step3.classList.add('completed'); step4.classList.remove('hidden'); step4.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800);
-    }
-  }
+  function startThinkingProcess(hasFile = false) { const container = document.getElementById('thinkingProcess'); const step1 = document.getElementById('step1'), step2 = document.getElementById('step2'), step3 = document.getElementById('step3'), step4 = document.getElementById('step4'); container.classList.remove('hidden'); step1.classList.remove('hidden', 'completed'); step2.classList.add('hidden'); step3.classList.add('hidden'); step4.classList.add('hidden'); step1.querySelector('i').className = 'fas fa-circle-notch fa-spin'; if (hasFile) { setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step2.classList.remove('hidden'); step2.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400); setTimeout(() => { if(isGenerating) { step2.querySelector('i').className = 'fas fa-check-circle'; step2.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800); setTimeout(() => { if(isGenerating) { step3.querySelector('i').className = 'fas fa-check-circle'; step3.classList.add('completed'); step4.classList.remove('hidden'); step4.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 1200); } else { setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400); setTimeout(() => { if(isGenerating) { step3.querySelector('i').className = 'fas fa-check-circle'; step3.classList.add('completed'); step4.classList.remove('hidden'); step4.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800); } }
+  function endThinkingProcess() { document.getElementById('thinkingProcess').classList.add('hidden'); }
   
-  function endThinkingProcess() {
-    document.getElementById('thinkingProcess').classList.add('hidden');
-  }
+  // IndexedDB dan fungsi-fungsi inti lainnya (sama seperti kode sebelumnya, disederhanakan agar tidak terlalu panjang)
+  let db = null; const DB_NAME = "KIRO_CLI_DB_V8", CHATS_STORE = "chats", TOPICS_STORE = "topics";
+  async function initDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, 2); request.onerror = () => reject(request.error); request.onsuccess = () => { db = request.result; resolve(db); }; request.onupgradeneeded = (event) => { const dbRef = event.target.result; if (!dbRef.objectStoreNames.contains(CHATS_STORE)) { const store = dbRef.createObjectStore(CHATS_STORE, { keyPath: "id", autoIncrement: true }); store.createIndex("topicId", "topicId", { unique: false }); } if (!dbRef.objectStoreNames.contains(TOPICS_STORE)) { dbRef.createObjectStore(TOPICS_STORE, { keyPath: "id", autoIncrement: true }); } }; }); }
+  async function saveTopic(topic) { if (!db) await initDB(); return new Promise((resolve, reject) => { const tx = db.transaction([TOPICS_STORE], "readwrite"); const req = tx.objectStore(TOPICS_STORE).put(topic); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
+  async function getAllTopics() { if (!db) await initDB(); return new Promise((resolve) => { const tx = db.transaction([TOPICS_STORE], "readonly"); const req = tx.objectStore(TOPICS_STORE).getAll(); req.onsuccess = () => resolve(req.result || []); }); }
+  async function saveMessage(message) { if (!db) await initDB(); return new Promise((resolve, reject) => { const tx = db.transaction([CHATS_STORE], "readwrite"); const req = tx.objectStore(CHATS_STORE).put(message); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
+  async function getMessagesByTopic(topicId) { if (!db) await initDB(); return new Promise((resolve) => { const tx = db.transaction([CHATS_STORE], "readonly"); const index = tx.objectStore(CHATS_STORE).index("topicId"); const req = index.getAll(topicId); req.onsuccess = () => resolve(req.result || []); }); }
+  async function deleteTopic(topicId) { if (!db) await initDB(); return new Promise((resolve) => { const tx = db.transaction([TOPICS_STORE, CHATS_STORE], "readwrite"); tx.objectStore(TOPICS_STORE).delete(topicId); const messagesReq = tx.objectStore(CHATS_STORE).index("topicId").getAll(topicId); messagesReq.onsuccess = () => { messagesReq.result.forEach(msg => tx.objectStore(CHATS_STORE).delete(msg.id)); resolve(); }; }); }
+  async function updateTopicPin(topicId, pinned) { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); if (topic) { topic.pinned = pinned; await saveTopic(topic); await loadChatList(); } }
+  async function updateTopicName(topicId, newName) { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); if (topic) { topic.name = newName; await saveTopic(topic); await loadChatList(); } }
+  function showContextMenu(e, topicId, topicName) { let activeMenu = document.querySelector('.context-menu'); if (activeMenu) activeMenu.remove(); const menu = document.createElement('div'); menu.className = 'context-menu'; menu.style.left = Math.min(e.pageX, window.innerWidth - 180) + 'px'; menu.style.top = e.pageY + 'px'; menu.innerHTML = `<div class="context-menu-item" data-action="pin"><i class="fas fa-thumbtack text-neon-orange"></i> Pin / Unpin</div><div class="context-menu-item" data-action="rename"><i class="fas fa-edit text-neon-cyan"></i> Rename Session</div><div class="context-menu-item" data-action="delete" style="color:#f87171;"><i class="fas fa-trash"></i> Delete Session</div>`; document.body.appendChild(menu); const handleClick = async (action) => { if (action === 'pin') { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); await updateTopicPin(topicId, !topic?.pinned); } else if (action === 'rename') { const newName = prompt('Enter new session name:', topicName); if (newName?.trim()) await updateTopicName(topicId, newName.trim()); } else if (action === 'delete') { if (confirm('Delete this session?')) { await deleteTopic(topicId); if (currentChatId === topicId) { currentChatId = null; document.getElementById('messagesContainer').innerHTML = ''; createNewChat(); } await loadChatList(); } } menu.remove(); }; menu.querySelectorAll('.context-menu-item').forEach(item => { item.addEventListener('click', () => handleClick(item.dataset.action)); }); setTimeout(() => { document.addEventListener('click', () => { if(menu.parentNode) menu.remove(); }, { once: true }); }, 10); }
   
-  // IndexedDB
-  let db = null;
-  const DB_NAME = "KIRO_CLI_DB_V8";
-  const CHATS_STORE = "chats";
-  const TOPICS_STORE = "topics";
+  async function extractFileContent(file, onProgress) { const ext = file.name.split('.').pop().toLowerCase(); let text = `[FILE: ${file.name}]\n`; if (onProgress) onProgress(10); if (ext === 'pdf') { const arrayBuffer = await file.arrayBuffer(); const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise; for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { const page = await pdf.getPage(i); const content = await page.getTextContent(); text += content.items.map(item => item.str).join(' ') + '\n'; onProgress(30 + Math.floor((i / 10) * 60)); } } else if (['xlsx','xls','csv'].includes(ext)) { const arrayBuffer = await file.arrayBuffer(); const workbook = XLSX.read(arrayBuffer); workbook.SheetNames.forEach(sheet => { const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 }); text += `\n[Sheet: ${sheet}]\nPreview:\n${JSON.stringify(data.slice(0, 10), null, 2)}\n`; }); onProgress(80); } else if (ext === 'docx') { const arrayBuffer = await file.arrayBuffer(); const result = await mammoth.extractRawText({ arrayBuffer }); text += result.value; onProgress(80); } else if (['png','jpg','jpeg'].includes(ext)) { const url = URL.createObjectURL(file); const { data: { text: ocrText } } = await Tesseract.recognize(url, 'ind+eng'); URL.revokeObjectURL(url); text += ocrText; onProgress(80); } else { text += await file.text(); onProgress(80); } onProgress(100); return { name: file.name, extractedText: text.substring(0, 6000) }; }
   
-  async function initDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, 2);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => { db = request.result; resolve(db); };
-      request.onupgradeneeded = (event) => {
-        const dbRef = event.target.result;
-        if (!dbRef.objectStoreNames.contains(CHATS_STORE)) {
-          const store = dbRef.createObjectStore(CHATS_STORE, { keyPath: "id", autoIncrement: true });
-          store.createIndex("topicId", "topicId", { unique: false });
-        }
-        if (!dbRef.objectStoreNames.contains(TOPICS_STORE)) {
-          dbRef.createObjectStore(TOPICS_STORE, { keyPath: "id", autoIncrement: true });
-        }
-      };
-    });
-  }
+  async function handleMultiFileUpload(files) { const previewContainer = document.getElementById('multiFilePreview'); const previewList = document.getElementById('filePreviewList'); previewContainer.classList.remove('hidden'); for (const file of files) { const fileId = Date.now() + '_' + Math.random(); const progressDiv = document.createElement('div'); progressDiv.className = 'file-card flex items-center gap-2 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1.5 min-w-[130px]'; progressDiv.innerHTML = `<i class="fas fa-file text-neon-purple text-xs"></i><div class="flex-1"><p class="text-xs truncate">${file.name}</p><div class="w-full bg-gray-800 rounded-full h-1"><div class="progress-bar bg-gradient-to-r from-neon-purple to-neon-pink h-1 rounded-full" style="width:0%"></div></div></div>`; previewList.appendChild(progressDiv); try { const extracted = await extractFileContent(file, (p) => { const bar = progressDiv.querySelector('.progress-bar'); if (bar) bar.style.width = p + '%'; }); uploadedFiles.push({ id: fileId, ...extracted }); progressDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 text-xs"></i><div class="flex-1"><p class="text-xs truncate text-green-400">${file.name}</p></div><button class="remove-file text-gray-500 hover:text-red-500 text-xs" data-id="${fileId}"><i class="fas fa-times"></i></button>`; progressDiv.querySelector('.remove-file')?.addEventListener('click', () => { uploadedFiles = uploadedFiles.filter(f => f.id !== fileId); progressDiv.remove(); if (uploadedFiles.length === 0) previewContainer.classList.add('hidden'); document.getElementById('fileCount').innerText = `${uploadedFiles.length}`; }); } catch(err) { progressDiv.innerHTML = `<div class="text-red-500 text-xs">✖ ${file.name}</div>`; } } document.getElementById('fileCount').innerText = `${uploadedFiles.length}`; }
   
-  async function saveTopic(topic) {
-    if (!db) await initDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([TOPICS_STORE], "readwrite");
-      const req = tx.objectStore(TOPICS_STORE).put(topic);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
+  async function sendToAI(message, fileContext = null) { startThinkingProcess(!!fileContext); let fullMessage = message; if (fileContext && fileContext.length > 0) { fullMessage = `FILES:\n${fileContext.map(f => `[${f.name}]\n${f.extractedText.substring(0, 3000)}`).join('\n\n')}\n\nQUERY: ${message}`; } const messages = [{ role: "system", content: "You are KIRO CLI, a terminal-style AI assistant. Respond in Indonesian with markdown format. Use code blocks with language identifiers." }, { role: "user", content: fullMessage }]; currentAbortController = new AbortController(); try { const response = await fetch(`${API_ENDPOINT}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2000 }), signal: currentAbortController.signal }); if (!response.ok) throw new Error(`API Error: ${response.status}`); const data = await response.json(); endThinkingProcess(); return data.choices[0].message.content; } catch(err) { endThinkingProcess(); if (err.name === 'AbortError') return null; return `⚠️ Error: ${err.message}. Please try again.`; } finally { currentAbortController = null; } }
   
-  async function getAllTopics() {
-    if (!db) await initDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction([TOPICS_STORE], "readonly");
-      const req = tx.objectStore(TOPICS_STORE).getAll();
-      req.onsuccess = () => resolve(req.result || []);
-    });
-  }
-  
-  async function saveMessage(message) {
-    if (!db) await initDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([CHATS_STORE], "readwrite");
-      const req = tx.objectStore(CHATS_STORE).put(message);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-  }
-  
-  async function getMessagesByTopic(topicId) {
-    if (!db) await initDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction([CHATS_STORE], "readonly");
-      const index = tx.objectStore(CHATS_STORE).index("topicId");
-      const req = index.getAll(topicId);
-      req.onsuccess = () => resolve(req.result || []);
-    });
-  }
-  
-  async function deleteTopic(topicId) {
-    if (!db) await initDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction([TOPICS_STORE, CHATS_STORE], "readwrite");
-      tx.objectStore(TOPICS_STORE).delete(topicId);
-      const messagesReq = tx.objectStore(CHATS_STORE).index("topicId").getAll(topicId);
-      messagesReq.onsuccess = () => {
-        messagesReq.result.forEach(msg => tx.objectStore(CHATS_STORE).delete(msg.id));
-        resolve();
-      };
-    });
-  }
-  
-  async function updateTopicPin(topicId, pinned) {
-    const topics = await getAllTopics();
-    const topic = topics.find(t => t.id === topicId);
-    if (topic) { topic.pinned = pinned; await saveTopic(topic); await loadChatList(); }
-  }
-  
-  async function updateTopicName(topicId, newName) {
-    const topics = await getAllTopics();
-    const topic = topics.find(t => t.id === topicId);
-    if (topic) { topic.name = newName; await saveTopic(topic); await loadChatList(); }
-  }
-  
-  function showContextMenu(e, topicId, topicName) {
-    let activeMenu = document.querySelector('.context-menu');
-    if (activeMenu) activeMenu.remove();
-    const menu = document.createElement('div');
-    menu.className = 'context-menu';
-    menu.style.left = Math.min(e.pageX, window.innerWidth - 180) + 'px';
-    menu.style.top = e.pageY + 'px';
-    menu.innerHTML = `
-      <div class="context-menu-item" data-action="pin"><i class="fas fa-thumbtack text-neon-orange"></i> Pin / Unpin</div>
-      <div class="context-menu-item" data-action="rename"><i class="fas fa-edit text-neon-cyan"></i> Rename Session</div>
-      <div class="context-menu-item" data-action="delete" style="color:#f87171;"><i class="fas fa-trash"></i> Delete Session</div>
-    `;
-    document.body.appendChild(menu);
-    
-    const handleClick = async (action) => {
-      if (action === 'pin') { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); await updateTopicPin(topicId, !topic?.pinned); }
-      else if (action === 'rename') { const newName = prompt('Enter new session name:', topicName); if (newName?.trim()) await updateTopicName(topicId, newName.trim()); }
-      else if (action === 'delete') { if (confirm('Delete this session?')) { await deleteTopic(topicId); if (currentChatId === topicId) { currentChatId = null; document.getElementById('messagesContainer').innerHTML = ''; createNewChat(); } await loadChatList(); } }
-      menu.remove();
-    };
-    menu.querySelectorAll('.context-menu-item').forEach(item => { item.addEventListener('click', () => handleClick(item.dataset.action)); });
-    setTimeout(() => { document.addEventListener('click', () => { if(menu.parentNode) menu.remove(); }, { once: true }); }, 10);
-  }
-  
-  // File extraction
-  async function extractFileContent(file, onProgress) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    let text = `[FILE: ${file.name}]\n`;
-    if (onProgress) onProgress(10);
-    if (ext === 'pdf') {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(' ') + '\n';
-        onProgress(30 + Math.floor((i / 10) * 60));
-      }
-    } else if (['xlsx','xls','csv'].includes(ext)) {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer);
-      workbook.SheetNames.forEach(sheet => {
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 });
-        text += `\n[Sheet: ${sheet}]\nPreview:\n${JSON.stringify(data.slice(0, 10), null, 2)}\n`;
-      });
-      onProgress(80);
-    } else if (ext === 'docx') {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.extractRawText({ arrayBuffer });
-      text += result.value;
-      onProgress(80);
-    } else if (['png','jpg','jpeg'].includes(ext)) {
-      const url = URL.createObjectURL(file);
-      const { data: { text: ocrText } } = await Tesseract.recognize(url, 'ind+eng');
-      URL.revokeObjectURL(url);
-      text += ocrText;
-      onProgress(80);
-    } else { text += await file.text(); onProgress(80); }
-    onProgress(100);
-    return { name: file.name, extractedText: text.substring(0, 6000) };
-  }
-  
-  async function handleMultiFileUpload(files) {
-    const previewContainer = document.getElementById('multiFilePreview');
-    const previewList = document.getElementById('filePreviewList');
-    previewContainer.classList.remove('hidden');
-    for (const file of files) {
-      const fileId = Date.now() + '_' + Math.random();
-      const progressDiv = document.createElement('div');
-      progressDiv.className = 'file-card flex items-center gap-2 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1.5 min-w-[130px]';
-      progressDiv.innerHTML = `<i class="fas fa-file text-neon-purple text-xs"></i><div class="flex-1"><p class="text-xs truncate">${file.name}</p><div class="w-full bg-gray-800 rounded-full h-1"><div class="progress-bar bg-gradient-to-r from-neon-purple to-neon-pink h-1 rounded-full" style="width:0%"></div></div></div>`;
-      previewList.appendChild(progressDiv);
-      try {
-        const extracted = await extractFileContent(file, (p) => { const bar = progressDiv.querySelector('.progress-bar'); if (bar) bar.style.width = p + '%'; });
-        uploadedFiles.push({ id: fileId, ...extracted });
-        progressDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 text-xs"></i><div class="flex-1"><p class="text-xs truncate text-green-400">${file.name}</p></div><button class="remove-file text-gray-500 hover:text-red-500 text-xs" data-id="${fileId}"><i class="fas fa-times"></i></button>`;
-        progressDiv.querySelector('.remove-file')?.addEventListener('click', () => { uploadedFiles = uploadedFiles.filter(f => f.id !== fileId); progressDiv.remove(); if (uploadedFiles.length === 0) previewContainer.classList.add('hidden'); document.getElementById('fileCount').innerText = `${uploadedFiles.length} file`; });
-      } catch(err) { progressDiv.innerHTML = `<div class="text-red-500 text-xs">✖ ${file.name}</div>`; }
-    }
-    document.getElementById('fileCount').innerText = `${uploadedFiles.length} file`;
-  }
-  
-  async function sendToAI(message, fileContext = null) {
-    startThinkingProcess(!!fileContext);
-    let fullMessage = message;
-    if (fileContext && fileContext.length > 0) {
-      fullMessage = `FILES:\n${fileContext.map(f => `[${f.name}]\n${f.extractedText.substring(0, 3000)}`).join('\n\n')}\n\nQUERY: ${message}`;
-    }
-    const messages = [{ role: "system", content: "You are KIRO CLI, a terminal-style AI assistant. Respond in Indonesian with markdown format. Use code blocks with language identifiers." }, { role: "user", content: fullMessage }];
-    
-    currentAbortController = new AbortController();
-    
-    try {
-      const response = await fetch(`${API_ENDPOINT}/chat/completions`, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
-        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2000 }),
-        signal: currentAbortController.signal
-      });
-      
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-      endThinkingProcess();
-      return data.choices[0].message.content;
-    } catch(err) {
-      endThinkingProcess();
-      if (err.name === 'AbortError') {
-        return null;
-      }
-      return `⚠️ Error: ${err.message}. Please try again.`;
-    } finally {
-      currentAbortController = null;
-    }
-  }
-  
-  async function addMessageWithTyping(role, content) {
-    const container = document.getElementById('messagesContainer');
-    const div = document.createElement('div');
-    const time = new Date().toLocaleTimeString();
-    
-    if (role === 'user') {
-      div.className = `flex justify-end mb-3`;
-      div.innerHTML = `<div class="max-w-[85%]"><div class="bg-gradient-to-r from-neon-purple/10 to-neon-pink/10 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-purple mb-1"><i class="fas fa-user-astronaut"></i> <span>kiro@user:~$</span></div><div class="text-gray-200 text-sm whitespace-pre-wrap break-words">${escapeHtml(content)}</div></div><div class="text-[10px] text-gray-600 mt-1 text-right">${time}</div></div>`;
-      container.appendChild(div);
-    } else {
-      div.className = `flex justify-start mb-3`;
-      const bubbleDiv = document.createElement('div');
-      bubbleDiv.className = 'max-w-[85%]';
-      bubbleDiv.innerHTML = `<div class="bg-black/50 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-cyan mb-1"><i class="fas fa-terminal"></i> <span>kiro@cli:~$</span></div><div class="message-typing-container message-content"></div></div><div class="text-[10px] text-gray-600 mt-1">${time}</div>`;
-      div.appendChild(bubbleDiv);
-      container.appendChild(div);
-      
-      const typingContainer = bubbleDiv.querySelector('.message-typing-container');
-      await typeMessageToElement(typingContainer, content);
-    }
-    container.scrollTop = container.scrollHeight;
-    
-    const welcome = container.querySelector('.flex-col.items-center');
-    if (welcome && container.children.length > 2) welcome.remove();
-    return div;
-  }
+  async function addMessageWithTyping(role, content) { const container = document.getElementById('messagesContainer'); const div = document.createElement('div'); const time = new Date().toLocaleTimeString(); if (role === 'user') { div.className = `flex justify-end mb-3`; div.innerHTML = `<div class="max-w-[85%]"><div class="bg-gradient-to-r from-neon-purple/10 to-neon-pink/10 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-purple mb-1"><i class="fas fa-user-astronaut"></i> <span>kiro@user:~$</span></div><div class="text-gray-200 text-sm whitespace-pre-wrap break-words">${escapeHtml(content)}</div></div><div class="text-[10px] text-gray-600 mt-1 text-right">${time}</div></div>`; container.appendChild(div); } else { div.className = `flex justify-start mb-3`; const bubbleDiv = document.createElement('div'); bubbleDiv.className = 'max-w-[85%]'; bubbleDiv.innerHTML = `<div class="bg-black/50 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-cyan mb-1"><i class="fas fa-terminal"></i> <span>kiro@cli:~$</span></div><div class="message-typing-container message-content"></div></div><div class="text-[10px] text-gray-600 mt-1">${time}</div>`; div.appendChild(bubbleDiv); container.appendChild(div); const typingContainer = bubbleDiv.querySelector('.message-typing-container'); await typeMessageToElement(typingContainer, content); } container.scrollTop = container.scrollHeight; const welcome = container.querySelector('.flex-col.items-center'); if (welcome && container.children.length > 2) welcome.remove(); return div; }
   
   function escapeHtml(str) { return str?.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) || ''; }
   
-  async function saveChatMessage(role, content) {
-    if (!currentChatId) await createNewChat();
-    await saveMessage({ topicId: currentChatId, role, content, time: new Date().toLocaleTimeString(), timestamp: Date.now() });
-    const topics = await getAllTopics();
-    const topic = topics.find(t => t.id === currentChatId);
-    if (topic) { topic.updatedAt = Date.now(); topic.preview = content.substring(0, 40); await saveTopic(topic); }
-    await loadChatList();
-  }
+  async function saveChatMessage(role, content) { if (!currentChatId) await createNewChat(); await saveMessage({ topicId: currentChatId, role, content, time: new Date().toLocaleTimeString(), timestamp: Date.now() }); const topics = await getAllTopics(); const topic = topics.find(t => t.id === currentChatId); if (topic) { topic.updatedAt = Date.now(); topic.preview = content.substring(0, 40); await saveTopic(topic); } await loadChatList(); }
   
-  async function loadChatList() {
-    let topics = await getAllTopics();
-    const searchTerm = document.getElementById('searchChat')?.value.toLowerCase() || '';
-    if (searchTerm) topics = topics.filter(t => t.name.toLowerCase().includes(searchTerm));
-    const pinned = topics.filter(t => t.pinned).sort((a,b) => b.updatedAt - a.updatedAt);
-    const unpinned = topics.filter(t => !t.pinned).sort((a,b) => b.updatedAt - a.updatedAt);
-    const container = document.getElementById('chatList');
-    if (topics.length === 0) { container.innerHTML = `<div class="text-center text-gray-600 text-xs py-8"><i class="fas fa-terminal text-2xl mb-2 block"></i>no sessions</div>`; return; }
-    container.innerHTML = [...pinned, ...unpinned].map(topic => `
-      <div class="chat-item group px-3 py-2 hover:bg-gradient-to-r hover:from-neon-purple/10 cursor-pointer transition border-l-2 border-transparent hover:border-neon-purple" data-id="${topic.id}">
-        <div class="flex items-center gap-2">
-          <i class="fas ${topic.pinned ? 'fa-thumbtack text-neon-orange rotate-45' : 'fa-hashtag text-neon-purple/50'} text-xs"></i>
-          <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-mono truncate text-gray-300">${escapeHtml(topic.name)}</span>
-              <button class="session-menu-btn text-gray-500 hover:text-neon-purple opacity-0 group-hover:opacity-100 transition p-1" data-id="${topic.id}" data-name="${escapeHtml(topic.name)}"><i class="fas fa-ellipsis-v text-xs"></i></button>
-            </div>
-            <p class="text-[10px] text-gray-600 truncate">${escapeHtml(topic.preview || 'click to open')}</p>
-          </div>
-        </div>
-      </div>
-    `).join('');
-    document.querySelectorAll('.chat-item').forEach(el => { el.addEventListener('click', (e) => { if (!e.target.closest('.session-menu-btn')) loadChat(parseInt(el.dataset.id)); }); });
-    document.querySelectorAll('.session-menu-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); showContextMenu(e, parseInt(btn.dataset.id), btn.dataset.name); }); });
-  }
+  async function loadChatList() { let topics = await getAllTopics(); const searchTerm = document.getElementById('searchChat')?.value.toLowerCase() || ''; if (searchTerm) topics = topics.filter(t => t.name.toLowerCase().includes(searchTerm)); const pinned = topics.filter(t => t.pinned).sort((a,b) => b.updatedAt - a.updatedAt); const unpinned = topics.filter(t => !t.pinned).sort((a,b) => b.updatedAt - a.updatedAt); const container = document.getElementById('chatList'); if (topics.length === 0) { container.innerHTML = `<div class="text-center text-gray-600 text-xs py-8"><i class="fas fa-terminal text-2xl mb-2 block"></i>no sessions</div>`; return; } container.innerHTML = [...pinned, ...unpinned].map(topic => `<div class="chat-item group px-3 py-2 hover:bg-gradient-to-r hover:from-neon-purple/10 cursor-pointer transition border-l-2 border-transparent hover:border-neon-purple" data-id="${topic.id}"><div class="flex items-center gap-2"><i class="fas ${topic.pinned ? 'fa-thumbtack text-neon-orange rotate-45' : 'fa-hashtag text-neon-purple/50'} text-xs"></i><div class="flex-1 min-w-0"><div class="flex justify-between items-center"><span class="text-xs font-mono truncate text-gray-300">${escapeHtml(topic.name)}</span><button class="session-menu-btn text-gray-500 hover:text-neon-purple opacity-0 group-hover:opacity-100 transition p-1" data-id="${topic.id}" data-name="${escapeHtml(topic.name)}"><i class="fas fa-ellipsis-v text-xs"></i></button></div><p class="text-[10px] text-gray-600 truncate">${escapeHtml(topic.preview || 'click to open')}</p></div></div></div>`).join(''); document.querySelectorAll('.chat-item').forEach(el => { el.addEventListener('click', (e) => { if (!e.target.closest('.session-menu-btn')) loadChat(parseInt(el.dataset.id)); }); }); document.querySelectorAll('.session-menu-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); showContextMenu(e, parseInt(btn.dataset.id), btn.dataset.name); }); }); }
   
-  async function loadChat(topicId) {
-    if (isGenerating) {
-      stopChatGeneration();
-    }
-    
-    currentChatId = topicId;
-    const messages = await getMessagesByTopic(topicId);
-    const container = document.getElementById('messagesContainer');
-    container.innerHTML = '';
-    for (const msg of messages.sort((a,b) => a.timestamp - b.timestamp)) {
-      await addMessageWithTyping(msg.role, msg.content);
-    }
-    if (messages.length === 0) await addMessageWithTyping('assistant', '✓ Session ready.\n\n💡 **Tips:** \n• Klik tombol **Run Code** di **bawah** setiap blok kode\n• Sidebar bisa di-**hide** untuk ruang chat lebih luas\n• Output console otomatis terbuka saat run code');
-    if (window.innerWidth < 768) closeMobileSidebar();
-  }
+  async function loadChat(topicId) { if (isGenerating) stopChatGeneration(); currentChatId = topicId; const messages = await getMessagesByTopic(topicId); const container = document.getElementById('messagesContainer'); container.innerHTML = ''; for (const msg of messages.sort((a,b) => a.timestamp - b.timestamp)) { await addMessageWithTyping(msg.role, msg.content); } if (messages.length === 0) await addMessageWithTyping('assistant', '✓ Session ready.\n\n💡 **Tips:** \n• Klik tombol **Run Code** di **bawah** setiap blok kode\n• Sidebar bisa di-**hide** untuk ruang lebih luas\n• Output console otomatis terbuka saat run code'); if (window.innerWidth < 768) closeMobileSidebar(); }
   
-  async function createNewChat() {
-    if (isGenerating) {
-      stopChatGeneration();
-    }
-    
-    const newTopic = { name: `session_${new Date().toLocaleTimeString()}`, preview: 'new session', updatedAt: Date.now(), createdAt: Date.now(), pinned: false };
-    const id = await saveTopic(newTopic);
-    currentChatId = id;
-    uploadedFiles = [];
-    document.getElementById('messagesContainer').innerHTML = '';
-    document.getElementById('multiFilePreview').classList.add('hidden');
-    document.getElementById('filePreviewList').innerHTML = '';
-    document.getElementById('fileCount').innerText = '0 files';
-    await addMessageWithTyping('assistant', '✓ KIRO CLI v8.0 ready!\n\n**New Features:**\n• **Stop Chat** button untuk menghentikan generasi\n• **Hide/Show Sidebar** untuk ruang lebih luas\n• Buttons di **BAWAH** setiap code block\n• **Smooth typing** tanpa glitch\n• Auto-open output console\n\nUpload files or type your question!');
-    await loadChatList();
-    if (window.innerWidth < 768) closeMobileSidebar();
-  }
+  async function createNewChat() { if (isGenerating) stopChatGeneration(); const newTopic = { name: `session_${new Date().toLocaleTimeString()}`, preview: 'new session', updatedAt: Date.now(), createdAt: Date.now(), pinned: false }; const id = await saveTopic(newTopic); currentChatId = id; uploadedFiles = []; document.getElementById('messagesContainer').innerHTML = ''; document.getElementById('multiFilePreview').classList.add('hidden'); document.getElementById('filePreviewList').innerHTML = ''; document.getElementById('fileCount').innerText = '0'; await addMessageWithTyping('assistant', '✓ KIRO CLI v8.0 ready!\n\n**Mobile Optimized:**\n• Sidebar accessible via menu\n• Output fullscreen on mobile\n• Smooth typing & code runner\n\nUpload files or type your question!'); await loadChatList(); if (window.innerWidth < 768) closeMobileSidebar(); }
   
   // Event Handlers
-  const sendBtn = document.getElementById('sendBtn');
-  const attachBtn = document.getElementById('attachBtn');
-  const fileInput = document.getElementById('fileInput');
-  const userInput = document.getElementById('userInput');
-  const newChatBtn = document.getElementById('newChatBtn');
-  const modelSelect = document.getElementById('modelSelect');
-  const searchChat = document.getElementById('searchChat');
-  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-  const toggleOutputBtn = document.getElementById('toggleOutputBtn');
-  const closeOutputBtn = document.getElementById('closeOutputBtn');
-  const clearOutputBtn = document.getElementById('clearOutputBtn');
-  const outputArea = document.getElementById('outputArea');
-  const toggleSidebarMainBtn = document.getElementById('toggleSidebarMainBtn');
-  const hideSidebarInternalBtn = document.getElementById('hideSidebarInternalBtn');
-  const stopChatBtn = document.getElementById('stopChatBtn');
+  const sendBtn = document.getElementById('sendBtn'), attachBtn = document.getElementById('attachBtn'), fileInput = document.getElementById('fileInput'), userInput = document.getElementById('userInput'), newChatBtn = document.getElementById('newChatBtn'), modelSelect = document.getElementById('modelSelect'), searchChat = document.getElementById('searchChat'), mobileMenuBtn = document.getElementById('mobileMenuBtn'), toggleOutputBtn = document.getElementById('toggleOutputBtn'), closeOutputBtn = document.getElementById('closeOutputBtn'), clearOutputBtn = document.getElementById('clearOutputBtn'), outputArea = document.getElementById('outputArea'), toggleSidebarMainBtn = document.getElementById('toggleSidebarMainBtn'), hideSidebarInternalBtn = document.getElementById('hideSidebarInternalBtn'), stopChatBtn = document.getElementById('stopChatBtn');
   
   toggleOutputBtn.addEventListener('click', () => outputArea.classList.toggle('open'));
   closeOutputBtn.addEventListener('click', () => outputArea.classList.remove('open'));
-  clearOutputBtn.addEventListener('click', () => { 
-    document.getElementById('outputContent').innerHTML = '<div class="text-gray-500 text-center py-10">▶ Console cleared. Run code to see results here</div>';
-  });
-  
-  // Event untuk toggle sidebar (show/hide)
+  clearOutputBtn.addEventListener('click', () => { document.getElementById('outputContent').innerHTML = '<div class="text-gray-500 text-center py-10">▶ Console cleared. Run code to see results here</div>'; });
   toggleSidebarMainBtn.addEventListener('click', toggleSidebarHideShow);
-  if (hideSidebarInternalBtn) {
-    hideSidebarInternalBtn.addEventListener('click', hideSidebar);
-  }
-  
+  if (hideSidebarInternalBtn) hideSidebarInternalBtn.addEventListener('click', hideSidebar);
   stopChatBtn.addEventListener('click', stopChatGeneration);
-  
   attachBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      await addMessageWithTyping('user', `$ upload ${files.length} file(s): ${files.map(f => f.name).join(', ')}`);
-      await saveChatMessage('user', `upload ${files.length} file(s)`);
-      await handleMultiFileUpload(files);
-    }
-    fileInput.value = '';
-  });
+  fileInput.addEventListener('change', async (e) => { const files = Array.from(e.target.files); if (files.length > 0) { await addMessageWithTyping('user', `$ upload ${files.length} file(s): ${files.map(f => f.name).join(', ')}`); await saveChatMessage('user', `upload ${files.length} file(s)`); await handleMultiFileUpload(files); } fileInput.value = ''; });
   
-  async function sendMessage() {
-    if (isGenerating) {
-      showOutputMessage("Chat is already generating. Use Stop button to cancel.", "warning");
-      return;
-    }
-    
-    const text = userInput.value.trim();
-    if (!text && uploadedFiles.length === 0) return;
-    
-    sendBtn.disabled = true;
-    sendBtn.style.opacity = '0.5';
-    isGenerating = true;
-    stopChatBtn.style.display = 'flex';
-    
-    try {
-      if (text) {
-        await addMessageWithTyping('user', text);
-        await saveChatMessage('user', text);
-      }
-      userInput.value = '';
-      userInput.style.height = 'auto';
-      
-      const response = await sendToAI(text || "analyze all uploaded files", uploadedFiles.length > 0 ? uploadedFiles : null);
-      
-      if (response) {
-        await addMessageWithTyping('assistant', response);
-        await saveChatMessage('assistant', response);
-      } else if (response === null) {
-        console.log("Generation stopped by user");
-      }
-    } finally {
-      isGenerating = false;
-      sendBtn.disabled = false;
-      sendBtn.style.opacity = '1';
-      stopChatBtn.style.display = 'none';
-    }
-  }
+  async function sendMessage() { if (isGenerating) { showOutputMessage("Chat is already generating. Use Stop button to cancel.", "warning"); return; } const text = userInput.value.trim(); if (!text && uploadedFiles.length === 0) return; sendBtn.disabled = true; sendBtn.style.opacity = '0.5'; isGenerating = true; stopChatBtn.style.display = 'flex'; try { if (text) { await addMessageWithTyping('user', text); await saveChatMessage('user', text); } userInput.value = ''; userInput.style.height = 'auto'; const response = await sendToAI(text || "analyze all uploaded files", uploadedFiles.length > 0 ? uploadedFiles : null); if (response) { await addMessageWithTyping('assistant', response); await saveChatMessage('assistant', response); } } finally { isGenerating = false; sendBtn.disabled = false; sendBtn.style.opacity = '1'; stopChatBtn.style.display = 'none'; } }
   
   sendBtn.addEventListener('click', sendMessage);
   userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
   userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(80, this.scrollHeight) + 'px'; });
   newChatBtn.addEventListener('click', () => createNewChat());
-  modelSelect.addEventListener('change', (e) => { 
-    currentModel = e.target.value; 
-    addMessageWithTyping('assistant', `✓ Model switched to ${currentModel}`);
-  });
+  modelSelect.addEventListener('change', (e) => { currentModel = e.target.value; addMessageWithTyping('assistant', `✓ Model switched to ${currentModel}`); });
   searchChat.addEventListener('input', () => loadChatList());
   mobileMenuBtn.addEventListener('click', () => openMobileSidebar());
   
-  document.querySelectorAll('.quick-cmd').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      if (btn.innerText.includes('upload')) attachBtn.click();
-      if (btn.innerText.includes('run')) toggleOutputBtn.click();
-      if (btn.innerText.includes('pin')) { const firstTopic = document.querySelector('.chat-item'); if(firstTopic) showContextMenu(e, parseInt(firstTopic.dataset.id), 'session'); }
-    });
-  });
+  document.querySelectorAll('.quick-cmd').forEach(btn => { btn.addEventListener('click', (e) => { if (btn.innerText.includes('upload')) attachBtn.click(); if (btn.innerText.includes('run')) toggleOutputBtn.click(); if (btn.innerText.includes('pin')) { const firstTopic = document.querySelector('.chat-item'); if(firstTopic) showContextMenu(e, parseInt(firstTopic.dataset.id), 'session'); } }); });
   
-  window.addEventListener('resize', () => {
-    const isMobile = window.innerWidth <= 768;
-    const sidebar = document.getElementById('sidebar');
-    
-    if (!isMobile) {
-      sidebar.classList.remove('mobile-open');
-      document.getElementById('sidebarOverlay').classList.remove('active');
-      document.body.style.overflow = '';
-      
-      const saved = localStorage.getItem('sidebarHidden');
-      if (saved === 'true') {
-        sidebar.classList.add('hidden-sidebar');
-        isSidebarHidden = true;
-      } else {
-        sidebar.classList.remove('hidden-sidebar');
-        isSidebarHidden = false;
-      }
-    } else {
-      sidebar.classList.remove('hidden-sidebar');
-      if (localStorage.getItem('sidebarHidden') === 'true') {
-        closeMobileSidebar();
-      } else {
-        // jangan auto open agar tidak mengganggu
-      }
-    }
-  });
+  window.addEventListener('resize', () => { const isMobile = window.innerWidth <= 768; const sidebar = document.getElementById('sidebar'); if (!isMobile) { sidebar.classList.remove('mobile-open'); document.getElementById('sidebarOverlay').classList.remove('active'); document.body.style.overflow = ''; const saved = localStorage.getItem('sidebarHidden'); if (saved === 'true') { sidebar.classList.add('hidden-sidebar'); isSidebarHidden = true; } else { sidebar.classList.remove('hidden-sidebar'); isSidebarHidden = false; } } else { sidebar.classList.remove('hidden-sidebar'); if (localStorage.getItem('sidebarHidden') === 'true') closeMobileSidebar(); } });
   
-  // Initialize
-  initDB().then(() => { 
-    loadChatList(); 
-    createNewChat();
-    loadSidebarState();
-  });
-  
-  // Preload Pyodide
+  initDB().then(() => { loadChatList(); createNewChat(); loadSidebarState(); });
   setTimeout(() => { initPyodide().catch(console.error); }, 5000);
 </script>
 </body>

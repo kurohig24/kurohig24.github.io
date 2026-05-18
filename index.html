@@ -3,144 +3,514 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-  <title>ARUL AI</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <title>KIRO CLI · Terminal AI Assistant with Code Runner</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Library -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.4.2/mammoth.browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <!-- Pyodide untuk Python -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+  
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #F9F3EA 0%, #F0E6D8 100%); color: #1e1b1a; overflow-x: hidden; min-height: 100vh; }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    @keyframes gradientBg {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes smoothTyping {
+      0% { opacity: 0; transform: translateY(5px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .cursor-blink::after { content: '█'; animation: blink 1s step-end infinite; margin-left: 2px; }
+    .typing-dots span { animation: blinkDot 1.4s infinite; animation-fill-mode: both; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blinkDot {
+      0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+      30% { opacity: 1; transform: translateY(-4px); }
+    }
+    .progress-bar { transition: width 0.3s ease; }
     
-    .neo-card { background: #ffffff; border: 2px solid #1e1b1a; box-shadow: 6px 6px 0px 0px rgba(0,0,0,1); transition: all 0.2s ease; }
-    .neo-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px 0px rgba(0,0,0,1); }
+    /* Code blocks styling - buttons di BOTTOM */
+    .code-block-wrapper { 
+      position: relative; 
+      margin: 16px 0; 
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .code-block-wrapper pre { 
+      border-radius: 12px 12px 0 0; 
+      padding: 16px; 
+      margin: 0;
+      background: linear-gradient(135deg, #0a0a0a, #0d1117); 
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-bottom: none;
+    }
+    .code-buttons-bar {
+      display: flex;
+      gap: 8px;
+      padding: 8px 12px;
+      background: rgba(13, 17, 23, 0.95);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      justify-content: flex-end;
+    }
+    .copy-code-btn, .run-code-btn {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .copy-code-btn { 
+      background: rgba(139, 92, 246, 0.2); 
+      border: 1px solid rgba(139, 92, 246, 0.5); 
+      color: #a78bfa; 
+    }
+    .copy-code-btn:hover { 
+      background: rgba(139, 92, 246, 0.4); 
+      color: white; 
+      transform: translateY(-1px);
+    }
+    .run-code-btn { 
+      background: rgba(34, 197, 94, 0.2); 
+      border: 1px solid rgba(34, 197, 94, 0.5); 
+      color: #4ade80; 
+    }
+    .run-code-btn:hover { 
+      background: rgba(34, 197, 94, 0.4); 
+      transform: translateY(-1px);
+    }
     
-    button { border: 2px solid #1e1b1a; box-shadow: 3px 3px 0px 0px #1e1b1a; font-weight: 700; transition: 0.05s linear; cursor: pointer; background: #FFD166; }
-    button:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px 0px #1e1b1a; }
-    .send-btn { background: linear-gradient(135deg, #2DC653, #20A843); color: white; padding: 10px 20px; border-radius: 0; }
-    .attach-btn { background: linear-gradient(135deg, #FFD166, #FFC107); padding: 10px 14px; }
-    .remove-file-btn { background: #EF476F; color: white; padding: 4px 10px; font-size: 0.7rem; }
-    .download-btn { background: #118AB2; color: white; padding: 6px 12px; font-size: 0.7rem; text-decoration: none; display: inline-block; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #8b5cf6, #ec4899); border-radius: 3px; }
     
-    .app-wrapper { display: flex; flex-direction: row; min-height: 100vh; width: 100%; }
+    /* Split Layout */
+    .split-layout {
+      display: flex;
+      flex-direction: row;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .output-area {
+      width: 0;
+      overflow: hidden;
+      background: #0a0a0a;
+      border-left: none;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .output-area.open {
+      width: 45%;
+      border-left: 2px solid #8b5cf6;
+    }
     
-    .sidebar { width: 280px; background: #F4EADB; border-right: 2px solid #1e1b1a; display: flex; flex-direction: column; flex-shrink: 0; height: 100vh; position: sticky; top: 0; overflow-y: auto; }
-    .profile-area { padding: 24px 20px; border-bottom: 2px solid #1e1b1a; margin: 12px; margin-bottom: 0; background: linear-gradient(135deg, #FFF8F0, #FFF0E0); }
-    .profile-name { font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; background: linear-gradient(135deg, #1e1b1a, #2d3748); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .status { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.7rem; font-weight: 600; }
-    .online-dot { width: 10px; height: 10px; background: #2DC653; border-radius: 50%; border: 1.5px solid black; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-    .mood-text { font-size: 0.7rem; background: #FFE5B4; padding: 6px 10px; display: inline-block; border: 1.5px solid black; margin-top: 12px; border-radius: 20px; }
+    /* Sidebar styles - Desktop first */
+    .sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(139, 92, 246, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 50;
+    }
     
-    .model-selector { margin: 16px; }
-    select { width: 100%; padding: 12px; font-weight: 600; font-size: 0.8rem; background: #FFE8D6; border: 2px solid black; cursor: pointer; }
+    /* HIDDEN state untuk desktop (disembunyikan total) */
+    .sidebar.hidden-sidebar {
+      width: 0px !important;
+      min-width: 0px !important;
+      border-right: none;
+      opacity: 0;
+      overflow: hidden;
+      padding: 0;
+    }
     
-    .chat-main { flex: 1; display: flex; flex-direction: column; background: #FDF8F0; min-width: 0; height: 100vh; overflow: hidden; }
-    .chat-header { padding: 14px 24px; border-bottom: 2px solid #1e1b1a; background: linear-gradient(135deg, #F9EFE0, #F4E5D0); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-    .chat-header h2 { font-weight: 800; font-size: 1.3rem; }
-    .badge-api { background: #1e1b1a; color: #FFD166; padding: 6px 12px; font-size: 0.65rem; font-weight: 700; border: 1px solid #FFD166; }
+    /* Minimized state untuk desktop (icon saja) - OPSIONAL, TAPI KITA PAKAI HIDDEN SAJA AGAR SIMPLE */
+    /* Tapi biar konsisten dengan permintaan hide/show, kita fokus ke hidden-sidebar */
     
-    .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-    .message { display: flex; max-width: 85%; animation: fadeSlide 0.3s ease; }
-    @keyframes fadeSlide { from { opacity: 0; transform: translateY(10px);} to { opacity: 1; transform: translateY(0);} }
-    .user-message { align-self: flex-end; justify-content: flex-end; }
-    .assistant-message { align-self: flex-start; }
-    .bubble { padding: 12px 18px; border: 2px solid #1e1b1a; box-shadow: 4px 4px 0 0 rgba(0,0,0,0.1); font-size: 0.9rem; line-height: 1.5; word-wrap: break-word; max-width: 100%; }
-    .user-message .bubble { background: linear-gradient(135deg, #FFE066, #FFD700); border-bottom-right-radius: 0; border-top-right-radius: 18px; border-bottom-left-radius: 18px; }
-    .assistant-message .bubble { background: #FFFFFF; border-top-left-radius: 0; border-top-right-radius: 18px; border-bottom-right-radius: 18px; }
-    .bubble table { display: block; overflow-x: auto; font-size: 0.75rem; border-collapse: collapse; width: 100%; margin: 10px 0; }
-    .bubble th, .bubble td { border: 1px solid black; padding: 6px 10px; text-align: left; }
-    .bubble pre { background: #1e1b1a; color: #FFE066; padding: 12px; overflow-x: auto; border-radius: 10px; margin: 10px 0; }
+    .sidebar.hidden-sidebar .sidebar-content {
+      display: none;
+    }
     
-    .file-download-card { background: linear-gradient(135deg, #e8e0d0, #ddd0b8); border: 2px solid #1e1b1a; padding: 14px; margin-top: 12px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border-radius: 12px; }
+    /* Untuk tombol toggle di header agar tetap terlihat jika sidebar hidden, kita tempatkan di luar, tapi di dalam sidebar tetap ada tombolnya? 
+       Agar user bisa show kembali, kita tambahkan tombol floating atau di main header. Kita akan tambahkan tombol Show/Hide di header chat area juga. */
     
-    .input-area { padding: 16px 20px; background: #F4EADB; border-top: 2px solid #1e1b1a; }
-    .input-group { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
-    .input-wrapper { flex: 1; background: white; border: 2px solid black; display: flex; align-items: center; padding: 8px 14px; gap: 10px; }
-    .input-wrapper textarea { flex: 1; border: none; background: transparent; resize: none; font-size: 0.9rem; padding: 10px 0; max-height: 100px; min-height: 45px; width: 100%; outline: none; font-family: inherit; }
-    
-    .active-file-bar { margin-top: 12px; background: #1e1b1a; color: #FFE066; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-radius: 8px; }
-    .analysis-tag { background: #118AB2; color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.65rem; display: inline-block; }
-    
-    .loading-emoticon { display: inline-flex; align-items: center; gap: 10px; background: #FFF0D4; padding: 8px 16px; border-radius: 50px; border: 1px solid black; font-size: 1.1rem; }
-    .loading-spinner-custom { animation: bounce 0.6s infinite alternate; display: inline-block; }
-    @keyframes bounce { 0% { transform: translateY(0px); } 100% { transform: translateY(-6px); } }
-    
-    .sidebar-footer { padding: 16px; font-size: 0.7rem; color: #555; border-top: 1px solid #ccc; margin-top: auto; background: #F4EADB; }
-    
+    /* Mobile styles */
     @media (max-width: 768px) {
-      .app-wrapper { flex-direction: column; }
-      .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 8px; border-right: none; border-bottom: 2px solid #1e1b1a; }
-      .profile-area { width: calc(100% - 20px); margin: 8px; padding: 12px; }
-      .profile-name { font-size: 1.3rem; }
-      .model-selector { flex: 1; min-width: 180px; margin: 0 8px; }
-      .message { max-width: 95%; }
-      .input-group { flex-direction: column; }
-      .input-wrapper { width: 100%; }
-      .send-btn { width: 100%; justify-content: center; }
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100%;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 100;
+        width: 280px !important;
+      }
+      
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+      
+      .sidebar.hidden-sidebar {
+        transform: translateX(-100%);
+        width: 280px !important; /* biar konsisten saat hidden di mobile */
+        min-width: 280px !important;
+        opacity: 1;
+      }
+      
+      .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 99;
+        display: none;
+        backdrop-filter: blur(4px);
+      }
+      
+      .sidebar-overlay.active {
+        display: block;
+      }
+      
+      .output-area.open { 
+        width: 100%; 
+        position: fixed; 
+        right: 0; 
+        top: 0; 
+        height: 100%; 
+        z-index: 60; 
+        border-left: none; 
+        border-right: 2px solid #8b5cf6; 
+      }
+      
+      .output-area.open .close-output-mobile { 
+        display: block; 
+      }
+      
+      .close-output-mobile { 
+        display: none; 
+      }
+    }
+    
+    .output-header {
+      background: #1a1a1a;
+      padding: 12px 16px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      background: #050505;
+    }
+    
+    .output-success { 
+      color: #4ade80; 
+      border-left: 3px solid #4ade80; 
+      padding: 8px 12px; 
+      background: rgba(74, 222, 128, 0.1); 
+      border-radius: 8px; 
+      margin: 8px 0; 
+    }
+    .output-error { 
+      color: #f87171; 
+      border-left: 3px solid #f87171; 
+      padding: 8px 12px; 
+      background: rgba(248, 113, 113, 0.1); 
+      border-radius: 8px; 
+      margin: 8px 0; 
+    }
+    .output-warning { 
+      color: #fbbf24; 
+      border-left: 3px solid #fbbf24; 
+      padding: 8px 12px; 
+      background: rgba(251, 191, 36, 0.1); 
+      border-radius: 8px; 
+      margin: 8px 0; 
+    }
+    
+    .gradient-text { background: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientBg 3s ease infinite; }
+    
+    .context-menu { position: fixed; background: #0a0a0a; border: 1px solid #8b5cf6; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 100; overflow: hidden; min-width: 160px; }
+    .context-menu-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: all 0.1s; }
+    .context-menu-item:hover { background: rgba(139, 92, 246, 0.2); }
+    .file-card { transition: all 0.2s; }
+    .file-card:hover { transform: translateY(-2px); border-color: #8b5cf6; }
+    
+    .thinking-process {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+      border-left: 3px solid #8b5cf6;
+      padding: 10px 16px;
+      margin: 8px 0;
+      border-radius: 12px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .thinking-step { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: #a78bfa; }
+    .thinking-step i { width: 18px; font-size: 12px; }
+    .thinking-step.completed { color: #4ade80; }
+    
+    /* Smooth typing effect */
+    .typing-code-container {
+      font-family: 'JetBrains Mono', monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      animation: smoothTyping 0.1s ease-out;
+    }
+    .typing-chunk {
+      display: inline;
+      animation: smoothTyping 0.05s ease-out;
+    }
+    
+    /* Message bubble styling */
+    .message-content {
+      line-height: 1.6;
+    }
+    .message-content p {
+      margin-bottom: 12px;
+    }
+    .message-content code {
+      background: rgba(139, 92, 246, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    /* Stop button animation */
+    .stop-chat-btn {
+      transition: all 0.2s;
+    }
+    .stop-chat-btn:hover {
+      background: rgba(239, 68, 68, 0.4);
+      transform: scale(1.05);
+    }
+    
+    /* Tombol show/hide sidebar di main header */
+    .toggle-sidebar-btn {
+      transition: all 0.2s;
+    }
+    .toggle-sidebar-btn:hover {
+      transform: scale(1.05);
+      background: rgba(139, 92, 246, 0.3);
     }
   </style>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { mono: ['JetBrains Mono', 'monospace'] },
+          colors: { 'neon-purple': '#8b5cf6', 'neon-pink': '#ec4899', 'neon-orange': '#f59e0b', 'neon-cyan': '#06b6d4', 'neon-green': '#4ade80' }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
-<div class="app-wrapper">
-  <div class="sidebar">
-    <div class="profile-area neo-card">
-      <div class="profile-name">🤖 ARUL AI</div>
-      <div class="status"><span class="online-dot"></span> <span> Siap Membantu</span></div>
-      <div class="mood-text"><i class="fas fa-infinity"></i> Semua bisa! Cukup tanya</div>
+<body class="bg-gradient-to-br from-[#0a0a0a] via-[#0f0f1a] to-[#0a0a0a] text-gray-200 font-mono overflow-hidden h-screen">
+
+<!-- Mobile Sidebar Overlay -->
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
+
+<div class="split-layout">
+  
+  <!-- Sidebar dengan hide/show button internal (tetap ada tombol di dalamnya, tapi kita tambahkan juga di header utama) -->
+  <div id="sidebar" class="sidebar">
+    <!-- Sidebar Header with Hide/Show Button (di dalam sidebar) -->
+    <div class="p-3 border-b border-neon-purple/20 flex items-center justify-between">
+      <div class="flex items-center gap-2 sidebar-content">
+        <i class="fas fa-terminal text-neon-purple text-sm"></i>
+        <span class="text-xs font-bold gradient-text">SESSIONS</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="hideSidebarInternalBtn" class="p-1.5 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition sidebar-content" title="Hide Sidebar">
+          <i class="fas fa-chevron-left text-neon-purple text-xs"></i>
+        </button>
+      </div>
     </div>
-    <div class="model-selector">
-    <br>
-      <label><i class="fas fa-brain"></i> PILIH MODEL AI</label>
-      <select id="modelSelect">
-        <option value="kr/claude-opus-4.7">🧠 Claude Opus 4.7 (Rekomendasi)</option>
-        <option value="ag/gemini-3.1-pro-high">⭐ Gemini 3.1 Pro High</option>
-        <option value="ag/claude-opus-4-6-thinking">💭 Claude Opus 4.6 Thinking</option>
-        <option value="ag/claude-sonnet-4-6">⚡ Claude Sonnet 4.6</option>
-        <option value="cx/gpt-5.5">🚀 GPT 5.5 Ultimate</option>
-      </select>
+    <div class="p-3 border-b border-neon-purple/20 sidebar-content">
+      <div class="relative">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-neon-purple/50 text-xs"></i>
+        <input type="text" id="searchChat" placeholder="search sessions..." class="w-full bg-black/50 border border-neon-purple/30 rounded-lg py-1.5 pl-8 pr-3 text-xs text-gray-400 focus:outline-none focus:border-neon-purple">
+      </div>
+    </div>
+    <div id="chatList" class="flex-1 overflow-y-auto py-2 sidebar-content"></div>
+    <div class="p-3 border-t border-neon-purple/20 text-[10px] text-gray-500 flex justify-between sidebar-content">
+      <span><i class="fas fa-brain text-neon-purple"></i> 75+ models</span>
+      <span><i class="fas fa-play text-neon-green"></i> Run Code</span>
+      <span><i class="fas fa-thumbtack text-neon-orange"></i> pin</span>
     </div>
   </div>
-
-  <div class="chat-main">
-    <div class="chat-header">
-      <h2><i class="fas fa-robot"></i> ARUL AI ·</h2>
-      <div class="badge-api"><i class="fas fa-brain"></i>BISMILLAH</div>
+  
+  <!-- Chat Area -->
+  <div class="chat-area flex flex-col">
+    
+    <!-- Header dengan tombol Show/Hide Sidebar -->
+    <div class="bg-[#0a0a0a]/80 backdrop-blur-sm border-b border-neon-purple/30 px-4 py-2 flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-3">
+        <div class="flex gap-1.5">
+          <div class="w-3 h-3 rounded-full bg-red-500"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+        </div>
+        <!-- Tombol Show/Hide Sidebar (di header utama) -->
+        <button id="toggleSidebarMainBtn" class="toggle-sidebar-btn p-1.5 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition" title="Toggle Sidebar">
+          <i class="fas fa-bars text-neon-purple text-sm"></i>
+        </button>
+        <button id="mobileMenuBtn" class="md:hidden text-neon-purple text-lg"><i class="fas fa-bars"></i></button>
+        <div class="flex items-center gap-2">
+          <i class="fas fa-terminal text-neon-purple text-sm animate-pulse"></i>
+          <span class="text-sm text-gray-300">kiro@cli:~</span>
+        </div>
+        <div class="hidden md:block text-xs gradient-text font-bold">[KIRO AI v8.0 · Smooth Typing + Hide/Show Sidebar]</div>
+      </div>
+      <div class="flex items-center gap-2 text-xs">
+        <button id="stopChatBtn" class="stop-chat-btn bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" style="display: none;">
+          <i class="fas fa-stop-circle mr-1"></i> Stop
+        </button>
+        <button id="toggleOutputBtn" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
+          <i class="fas fa-terminal mr-1"></i> Show Output
+        </button>
+        <div class="flex items-center gap-1 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1">
+          <i class="fas fa-microchip text-neon-cyan"></i>
+          <select id="modelSelect" class="bg-transparent text-gray-300 outline-none text-xs cursor-pointer">
+            <option value="kr/claude-opus-4.7">🧠 claude-opus-4.7</option>
+            <option value="ag/gemini-3.1-pro-high">⭐ gemini-3.1-pro</option>
+            <option value="ag/claude-sonnet-4-6">⚡ claude-sonnet-4.6</option>
+            <option value="cx/gpt-5.5">🚀 gpt-5.5</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-1 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1">
+          <i class="fas fa-database text-neon-orange"></i>
+          <span class="text-gray-400" id="fileCount">0 files</span>
+        </div>
+        <button id="newChatBtn" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
+          <i class="fas fa-plus mr-1"></i> new
+        </button>
+      </div>
     </div>
-    <div class="messages-container" id="messagesContainer">
-      <div class="message assistant-message">
-        <div class="bubble">
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div style="font-size: 2.5rem;">🌟</div>
-            <div>
-              <strong style="font-size: 1.1rem;">Halo! Aku ARUL AI</strong><br>
-              <span class="analysis-tag"><i class="fas fa-infinity"></i> Tanpa batasan fungsi</span>
-            </div>
+    
+    <!-- Messages Container -->
+    <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+      <div class="flex flex-col items-center justify-center min-h-[200px]">
+        <div class="text-center space-y-3">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-neon-purple to-neon-pink flex items-center justify-center animate-pulse">
+            <i class="fas fa-terminal text-2xl text-white"></i>
           </div>
-          <br>
-          <strong>Cukup beri perintah, aku akan melakukan yang terbaik</strong><br><br>
-          💬 <strong>Coba sekarang:</strong> Upload file atau ketik perintah apapun!
+          <p class="text-sm text-gray-400">terminal-based AI assistant · optimized v8.0</p>
+          <div class="flex gap-2 justify-center flex-wrap mt-2">
+            <button class="quick-cmd bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">📁 upload</button>
+            <button class="quick-cmd bg-gradient-to-r from-neon-green/20 to-neon-purple/20 border border-neon-green/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">▶ run code</button>
+            <button class="quick-cmd bg-gradient-to-r from-neon-orange/20 to-neon-pink/20 border border-neon-orange/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition">📌 pin</button>
+          </div>
         </div>
       </div>
     </div>
-    <div class="input-area">
-      <div class="input-group">
-        <div class="input-wrapper neo-card">
-          <i class="fas fa-pen-fancy" style="color:#118AB2;"></i>
-          <textarea id="userInput" rows="1" placeholder="Ketik apapun...."></textarea>
-          <button id="attachButton" class="attach-btn"><i class="fas fa-paperclip"></i> Upload</button>
-          <input type="file" id="fileInput" style="display:none" accept=".pdf,.xlsx,.xls,.csv,.docx,.pptx,.png,.jpg,.jpeg,.txt">
+    
+    <!-- Multi File Preview -->
+    <div id="multiFilePreview" class="hidden px-4 py-2 border-t border-neon-purple/20 bg-black/30">
+      <div class="flex gap-2 overflow-x-auto pb-2" id="filePreviewList"></div>
+    </div>
+    
+    <!-- Thinking Process -->
+    <div id="thinkingProcess" class="hidden px-4 py-2 border-t border-neon-purple/20 bg-black/40">
+      <div class="thinking-process">
+        <div id="thinkingSteps">
+          <div class="thinking-step" id="step1"><i class="fas fa-circle-notch fa-spin"></i> <span>Reading input...</span></div>
+          <div class="thinking-step hidden" id="step2"><i class="fas fa-search"></i> <span>Searching context...</span></div>
+          <div class="thinking-step hidden" id="step3"><i class="fas fa-brain"></i> <span>Processing with AI...</span></div>
+          <div class="thinking-step hidden" id="step4"><i class="fas fa-code"></i> <span>Generating response...</span></div>
         </div>
-        <button id="sendBtn" class="send-btn"><i class="fas fa-paper-plane"></i> Kirim</button>
       </div>
-      <div id="activeFilePanel" style="display: none;" class="active-file-bar"></div>
+    </div>
+    
+    <!-- Typing Indicator -->
+    <div id="typingIndicator" class="hidden px-4 py-2">
+      <div class="flex items-center gap-2 text-neon-purple text-sm">
+        <div class="typing-dots flex gap-1"><span>●</span><span>●</span><span>●</span></div>
+        <span class="text-xs text-gray-400">kiro is typing...</span>
+      </div>
+    </div>
+    
+    <!-- Input Area -->
+    <div class="border-t border-neon-purple/20 bg-black/40 backdrop-blur-sm">
+      <div class="flex items-center gap-2 p-3">
+        <div class="flex items-center gap-1 text-neon-purple text-sm">
+          <i class="fas fa-chevron-right"></i>
+          <span class="text-gray-500">$</span>
+        </div>
+        <div class="flex-1 relative">
+          <textarea id="userInput" rows="1" placeholder="ask about files, type a command, or request code..." class="w-full bg-transparent border-none outline-none text-gray-200 text-sm resize-none font-mono py-2 placeholder:text-gray-600"></textarea>
+        </div>
+        <button id="attachBtn" class="p-2 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition">
+          <i class="fas fa-paperclip text-neon-purple text-sm"></i>
+        </button>
+        <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.xlsx,.xls,.csv,.docx,.pptx,.png,.jpg,.jpeg,.txt">
+        <button id="sendBtn" class="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-purple to-neon-pink hover:from-neon-pink hover:to-neon-purple transition-all text-sm font-bold shadow-lg">
+          <i class="fas fa-paper-plane mr-1"></i> run
+        </button>
+      </div>
+      <div class="px-3 pb-2 text-[10px] text-gray-600 flex gap-4 flex-wrap">
+        <span><i class="fas fa-upload text-neon-purple"></i> pdf/excel/word/image</span>
+        <span><i class="fas fa-play text-neon-green"></i> click ▶ on code to run</span>
+        <span><i class="fas fa-copy text-neon-cyan"></i> copy code</span>
+        <span><i class="fas fa-compress text-neon-orange"></i> hide sidebar for more space</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Output Panel -->
+  <div id="outputArea" class="output-area">
+    <div class="output-header">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-terminal text-neon-purple"></i>
+        <span class="text-sm font-bold">Output Console</span>
+        <span class="text-xs text-gray-500">— code execution result</span>
+      </div>
+      <div class="flex gap-2">
+        <button id="clearOutputBtn" class="text-gray-400 hover:text-white text-xs px-2 py-1 rounded bg-black/50"><i class="fas fa-trash-alt"></i> Clear</button>
+        <button id="closeOutputBtn" class="text-gray-400 hover:text-red-400 hidden close-output-mobile"><i class="fas fa-times"></i></button>
+      </div>
+    </div>
+    <div id="outputContent" class="output-content">
+      <div class="text-gray-500 text-center py-10">▶ Click "Show Output" or run code to see results here</div>
     </div>
   </div>
 </div>
@@ -150,296 +520,868 @@
   const API_ENDPOINT = "https://api.ahwanulm.me/v1";
   const API_KEY = "sk-fae1327aa9f2c80b-xtrat0-faf14a55";
   let currentModel = "kr/claude-opus-4.7";
+  let currentChatId = null;
+  let uploadedFiles = [];
+  let pyodide = null;
+  let isTyping = false;
+  let currentAbortController = null; // Untuk stop chat
+  let isGenerating = false;
   
-  let uploadedFile = null;
-  let conversationHistory = [{ role: "system", content: `Kamu adalah ARUL AI, Asisten Universal yang sangat cerdas dan fleksibel. Kamu bisa melakukan APAPUN yang diminta pengguna:
-
-  KEMAMPUAN UTAMA:
-  1. MEMBACA & MENGANALISIS FILE: PDF, Excel, Word, PPT, Gambar (OCR). Ekstrak konten dan jawab pertanyaan.
-  2. MEMBUAT FILE: DOC, PDF, XLSX, PPT berdasarkan deskripsi. Untuk membuat file, kembalikan JSON: {"fileType":"doc/pdf/xlsx/ppt","fileName":"nama","content":"isi"}.
-  3. MEREVISI FILE: Upload file lalu minta revisi.
-  4. ANALISIS DATA: Dari Excel/CSV, berikan statistik, insight, tren, rekomendasi.
-  5. PENERJEMAHAN: Terjemahkan teks/dokumen ke berbagai bahasa.
-  6. CODING: Buat kode Python, JavaScript, HTML, SQL, dll. Sertakan penjelasan.
-  7. SURAT & DOKUMEN RESMI: Surat lamaran, proposal, undangan, kontrak, dll.
-  8. PENJELASAN KONSEP: Jelaskan topik rumit dengan analogi sederhana dan contoh.
+  // Sidebar hide/show state (disembunyikan total)
+  let isSidebarHidden = false;
   
-  Aturan Respons:
-  - Gunakan Bahasa Indonesia yang baik dan benar
-  - Respons dengan format MARKDOWN, gunakan tabel untuk data, gunakan code block untuk kode
-  - Jika membuat file, pastikan JSON valid
-  - Bersikap ramah, profesional, dan helpful seperti Claude AI
-  - Adaptif: lakukan sesuai perintah tanpa perlu konfirmasi ulang` }];
+  // Fungsi untuk hide sidebar (total collapse)
+  function hideSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth <= 768) {
+      // Mobile: cukup close
+      closeMobileSidebar();
+      isSidebarHidden = true;
+    } else {
+      sidebar.classList.add('hidden-sidebar');
+      isSidebarHidden = true;
+    }
+    localStorage.setItem('sidebarHidden', 'true');
+  }
   
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  // Fungsi untuk show sidebar
+  function showSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth <= 768) {
+      // Mobile: open
+      openMobileSidebar();
+      isSidebarHidden = false;
+    } else {
+      sidebar.classList.remove('hidden-sidebar');
+      isSidebarHidden = false;
+    }
+    localStorage.setItem('sidebarHidden', 'false');
+  }
   
-  // ========== EKSTRAKSI FILE ==========
-  async function extractFileContent(file) {
+  // Toggle sidebar hide/show
+  function toggleSidebarHideShow() {
+    if (isSidebarHidden) {
+      showSidebar();
+    } else {
+      hideSidebar();
+    }
+  }
+  
+  // Load sidebar state dari localStorage
+  function loadSidebarState() {
+    const saved = localStorage.getItem('sidebarHidden');
+    const isMobile = window.innerWidth <= 768;
+    if (saved === 'true') {
+      if (!isMobile) {
+        document.getElementById('sidebar').classList.add('hidden-sidebar');
+        isSidebarHidden = true;
+      } else {
+        // Di mobile, state hidden berarti sidebar tertutup
+        closeMobileSidebar();
+        isSidebarHidden = true;
+      }
+    } else {
+      if (!isMobile) {
+        document.getElementById('sidebar').classList.remove('hidden-sidebar');
+        isSidebarHidden = false;
+      } else {
+        // Default di mobile terbuka? Tidak, lebih baik tertutup agar tidak mengganggu, tapi ikuti state
+        if (saved === 'false') openMobileSidebar();
+        else closeMobileSidebar();
+        isSidebarHidden = (saved === 'true');
+      }
+    }
+  }
+  
+  // Mobile sidebar functions
+  function openMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    // Saat manual open via tombol, update state hidden jadi false
+    isSidebarHidden = false;
+    localStorage.setItem('sidebarHidden', 'false');
+  }
+  
+  function closeMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    // Saat manual close, update state hidden jadi true
+    isSidebarHidden = true;
+    localStorage.setItem('sidebarHidden', 'true');
+  }
+  
+  // Stop chat generation
+  function stopChatGeneration() {
+    if (currentAbortController) {
+      currentAbortController.abort();
+      currentAbortController = null;
+    }
+    isGenerating = false;
+    isTyping = false;
+    
+    // Hide stop button
+    document.getElementById('stopChatBtn').style.display = 'none';
+    
+    // Hide thinking process
+    endThinkingProcess();
+    
+    // Add stop message
+    addMessageWithTyping('assistant', '⚠️ **Chat generation stopped by user.**\n\nYou can continue with a new question or adjust your input.');
+    
+    // Re-enable send button
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('sendBtn').style.opacity = '1';
+  }
+  
+  // Show output message helper
+  function showOutputMessage(message, type = "info") {
+    const outputContent = document.getElementById('outputContent');
+    const outputArea = document.getElementById('outputArea');
+    outputArea.classList.add('open');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `output-${type}`;
+    messageDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>${message}`;
+    outputContent.appendChild(messageDiv);
+    outputContent.scrollTop = outputContent.scrollHeight;
+  }
+  
+  // Initialize Pyodide
+  async function initPyodide() {
+    if (!pyodide) {
+      showOutputMessage("Loading Python environment...", "warning");
+      pyodide = await loadPyodide();
+      showOutputMessage("✓ Python environment ready", "success");
+    }
+    return pyodide;
+  }
+  
+  // Run Code Function
+  async function runCode(code, language) {
+    console.log("Running code:", language, code.substring(0, 100));
+    const outputContent = document.getElementById('outputContent');
+    const outputArea = document.getElementById('outputArea');
+    
+    // Open output panel
+    outputArea.classList.add('open');
+    
+    // Create execution container
+    const executionDiv = document.createElement('div');
+    executionDiv.className = 'mb-4';
+    executionDiv.innerHTML = `<div class="text-yellow-400 mb-2"><i class="fas fa-spinner fa-spin"></i> Running ${language} code...</div>`;
+    outputContent.appendChild(executionDiv);
+    outputContent.scrollTop = outputContent.scrollHeight;
+    
+    try {
+      let result = '';
+      let executionTime = Date.now();
+      
+      if (language === 'javascript' || language === 'js') {
+        let logs = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = (...args) => logs.push(args.map(arg => {
+          try {
+            if (typeof arg === 'object') return JSON.stringify(arg, null, 2);
+            return String(arg);
+          } catch {
+            return String(arg);
+          }
+        }).join(' '));
+        console.error = (...args) => logs.push(`[ERROR] ${args.join(' ')}`);
+        console.warn = (...args) => logs.push(`[WARN] ${args.join(' ')}`);
+        
+        try {
+          const asyncFunc = new Function('return (async () => { try { ' + code + ' } catch(e) { console.error(e.message); } })()');
+          await asyncFunc();
+          result = logs.join('\n');
+          if (!result) result = '✓ Code executed successfully (no console output)';
+        } catch (err) {
+          result = `Error: ${err.message}`;
+        }
+        
+        console.log = originalLog;
+        console.error = originalError;
+        console.warn = originalWarn;
+        
+        executionTime = Date.now() - executionTime;
+        executionDiv.innerHTML = `
+          <div class="output-success">
+            <i class="fas fa-check-circle mr-2"></i>
+            JavaScript execution completed in ${executionTime}ms
+          </div>
+          <pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>
+        `;
+      } 
+      else if (language === 'python' || language === 'py') {
+        await initPyodide();
+        try {
+          pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+sys.stderr = StringIO()
+`);
+          await pyodide.runPythonAsync(code);
+          const output = pyodide.runPython('sys.stdout.getvalue()');
+          const error = pyodide.runPython('sys.stderr.getvalue()');
+          result = output || (error || '✓ Code executed successfully (no output)');
+          if (error) result = `Output:\n${output}\n\nError:\n${error}`;
+          
+          executionTime = Date.now() - executionTime;
+          executionDiv.innerHTML = `
+            <div class="output-success">
+              <i class="fas fa-check-circle mr-2"></i>
+              Python execution completed in ${executionTime}ms
+            </div>
+            <pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>
+          `;
+        } catch (err) {
+          executionDiv.innerHTML = `
+            <div class="output-error">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              Python Error: ${escapeHtml(err.message)}
+            </div>
+          `;
+        }
+      }
+      else if (language === 'html') {
+        const iframe = document.createElement('iframe');
+        iframe.sandbox = 'allow-same-origin allow-scripts';
+        iframe.style.width = '100%';
+        iframe.style.height = '400px';
+        iframe.style.border = '1px solid #8b5cf6';
+        iframe.style.borderRadius = '8px';
+        iframe.style.background = 'white';
+        iframe.srcdoc = code;
+        
+        executionTime = Date.now() - executionTime;
+        executionDiv.innerHTML = `
+          <div class="output-success">
+            <i class="fas fa-check-circle mr-2"></i>
+            HTML rendered in ${executionTime}ms
+          </div>
+        `;
+        executionDiv.appendChild(iframe);
+      }
+      else if (language === 'css') {
+        const styleId = 'dynamic-css-' + Date.now();
+        let style = document.getElementById(styleId);
+        if (!style) {
+          style = document.createElement('style');
+          style.id = styleId;
+          document.head.appendChild(style);
+        }
+        style.textContent = code;
+        
+        executionTime = Date.now() - executionTime;
+        executionDiv.innerHTML = `
+          <div class="output-success">
+            <i class="fas fa-check-circle mr-2"></i>
+            CSS applied successfully in ${executionTime}ms
+          </div>
+          <pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>
+        `;
+      }
+      else {
+        executionDiv.innerHTML = `
+          <div class="output-error">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            Language "${language}" not supported. Supported: javascript, python, html, css
+          </div>
+        `;
+      }
+    } catch (err) {
+      executionDiv.innerHTML = `
+        <div class="output-error">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Execution Error: ${escapeHtml(err.message)}
+        </div>
+      `;
+    }
+    outputContent.scrollTop = outputContent.scrollHeight;
+  }
+  
+  // Function to add buttons to code blocks - buttons at BOTTOM
+  function addButtonsToCodeBlocks() {
+    console.log("Adding buttons to code blocks...");
+    const allPres = document.querySelectorAll('#messagesContainer pre');
+    
+    allPres.forEach(pre => {
+      if (pre.parentElement.classList.contains('code-block-wrapper')) return;
+      
+      const code = pre.querySelector('code');
+      if (!code) return;
+      
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper';
+      
+      let language = 'javascript';
+      const classMatch = code.className.match(/language-(\w+)/);
+      if (classMatch) {
+        language = classMatch[1];
+      }
+      
+      const buttonsBar = document.createElement('div');
+      buttonsBar.className = 'code-buttons-bar';
+      
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-code-btn';
+      copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code';
+      copyBtn.onclick = async (e) => {
+        e.stopPropagation();
+        await navigator.clipboard.writeText(code.textContent);
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Code'; }, 2000);
+      };
+      
+      const runBtn = document.createElement('button');
+      runBtn.className = 'run-code-btn';
+      runBtn.innerHTML = '<i class="fas fa-play"></i> Run Code';
+      runBtn.onclick = (e) => {
+        e.stopPropagation();
+        console.log("Run button clicked for language:", language);
+        runCode(code.textContent, language);
+      };
+      
+      buttonsBar.appendChild(copyBtn);
+      buttonsBar.appendChild(runBtn);
+      
+      pre.parentNode.insertBefore(wrapper, pre);
+      wrapper.appendChild(pre);
+      wrapper.appendChild(buttonsBar);
+    });
+  }
+  
+  // Smooth typing effect
+  async function typeMessageToElement(element, fullText, speed = 2) {
+    if (isTyping) return;
+    isTyping = true;
+    
+    let i = 0;
+    element.innerHTML = '';
+    const textContainer = document.createElement('div');
+    textContainer.className = 'typing-code-container message-content';
+    element.appendChild(textContainer);
+    
+    const chunkSize = 2;
+    const chunks = [];
+    while (i < fullText.length) {
+      chunks.push(fullText.slice(i, i + chunkSize));
+      i += chunkSize;
+    }
+    
+    for (const chunk of chunks) {
+      if (!isGenerating) {
+        isTyping = false;
+        return;
+      }
+      
+      const span = document.createElement('span');
+      span.className = 'typing-chunk';
+      span.textContent = chunk;
+      textContainer.appendChild(span);
+      
+      const container = document.getElementById('messagesContainer');
+      container.scrollTop = container.scrollHeight;
+      
+      let waitTime = speed;
+      if (chunk === '\n') waitTime = speed * 2;
+      if (chunk === ' ') waitTime = speed / 2;
+      
+      await new Promise(r => setTimeout(r, waitTime));
+    }
+    
+    isTyping = false;
+    
+    const parsedHtml = marked.parse(fullText);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = parsedHtml;
+    
+    element.innerHTML = tempDiv.innerHTML;
+    
+    element.querySelectorAll('pre code').forEach(block => {
+      hljs.highlightElement(block);
+    });
+    
+    setTimeout(() => {
+      addButtonsToCodeBlocks();
+    }, 50);
+  }
+  
+  // Thinking process
+  function startThinkingProcess(hasFile = false) {
+    const container = document.getElementById('thinkingProcess');
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const step4 = document.getElementById('step4');
+    
+    container.classList.remove('hidden');
+    step1.classList.remove('hidden', 'completed');
+    step2.classList.add('hidden');
+    step3.classList.add('hidden');
+    step4.classList.add('hidden');
+    step1.querySelector('i').className = 'fas fa-circle-notch fa-spin';
+    
+    if (hasFile) {
+      setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step2.classList.remove('hidden'); step2.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400);
+      setTimeout(() => { if(isGenerating) { step2.querySelector('i').className = 'fas fa-check-circle'; step2.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800);
+      setTimeout(() => { if(isGenerating) { step3.querySelector('i').className = 'fas fa-check-circle'; step3.classList.add('completed'); step4.classList.remove('hidden'); step4.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 1200);
+    } else {
+      setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400);
+      setTimeout(() => { if(isGenerating) { step3.querySelector('i').className = 'fas fa-check-circle'; step3.classList.add('completed'); step4.classList.remove('hidden'); step4.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800);
+    }
+  }
+  
+  function endThinkingProcess() {
+    document.getElementById('thinkingProcess').classList.add('hidden');
+  }
+  
+  // IndexedDB
+  let db = null;
+  const DB_NAME = "KIRO_CLI_DB_V8";
+  const CHATS_STORE = "chats";
+  const TOPICS_STORE = "topics";
+  
+  async function initDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, 2);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => { db = request.result; resolve(db); };
+      request.onupgradeneeded = (event) => {
+        const dbRef = event.target.result;
+        if (!dbRef.objectStoreNames.contains(CHATS_STORE)) {
+          const store = dbRef.createObjectStore(CHATS_STORE, { keyPath: "id", autoIncrement: true });
+          store.createIndex("topicId", "topicId", { unique: false });
+        }
+        if (!dbRef.objectStoreNames.contains(TOPICS_STORE)) {
+          dbRef.createObjectStore(TOPICS_STORE, { keyPath: "id", autoIncrement: true });
+        }
+      };
+    });
+  }
+  
+  async function saveTopic(topic) {
+    if (!db) await initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([TOPICS_STORE], "readwrite");
+      const req = tx.objectStore(TOPICS_STORE).put(topic);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  
+  async function getAllTopics() {
+    if (!db) await initDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction([TOPICS_STORE], "readonly");
+      const req = tx.objectStore(TOPICS_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+    });
+  }
+  
+  async function saveMessage(message) {
+    if (!db) await initDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([CHATS_STORE], "readwrite");
+      const req = tx.objectStore(CHATS_STORE).put(message);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  
+  async function getMessagesByTopic(topicId) {
+    if (!db) await initDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction([CHATS_STORE], "readonly");
+      const index = tx.objectStore(CHATS_STORE).index("topicId");
+      const req = index.getAll(topicId);
+      req.onsuccess = () => resolve(req.result || []);
+    });
+  }
+  
+  async function deleteTopic(topicId) {
+    if (!db) await initDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction([TOPICS_STORE, CHATS_STORE], "readwrite");
+      tx.objectStore(TOPICS_STORE).delete(topicId);
+      const messagesReq = tx.objectStore(CHATS_STORE).index("topicId").getAll(topicId);
+      messagesReq.onsuccess = () => {
+        messagesReq.result.forEach(msg => tx.objectStore(CHATS_STORE).delete(msg.id));
+        resolve();
+      };
+    });
+  }
+  
+  async function updateTopicPin(topicId, pinned) {
+    const topics = await getAllTopics();
+    const topic = topics.find(t => t.id === topicId);
+    if (topic) { topic.pinned = pinned; await saveTopic(topic); await loadChatList(); }
+  }
+  
+  async function updateTopicName(topicId, newName) {
+    const topics = await getAllTopics();
+    const topic = topics.find(t => t.id === topicId);
+    if (topic) { topic.name = newName; await saveTopic(topic); await loadChatList(); }
+  }
+  
+  function showContextMenu(e, topicId, topicName) {
+    let activeMenu = document.querySelector('.context-menu');
+    if (activeMenu) activeMenu.remove();
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.style.left = Math.min(e.pageX, window.innerWidth - 180) + 'px';
+    menu.style.top = e.pageY + 'px';
+    menu.innerHTML = `
+      <div class="context-menu-item" data-action="pin"><i class="fas fa-thumbtack text-neon-orange"></i> Pin / Unpin</div>
+      <div class="context-menu-item" data-action="rename"><i class="fas fa-edit text-neon-cyan"></i> Rename Session</div>
+      <div class="context-menu-item" data-action="delete" style="color:#f87171;"><i class="fas fa-trash"></i> Delete Session</div>
+    `;
+    document.body.appendChild(menu);
+    
+    const handleClick = async (action) => {
+      if (action === 'pin') { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); await updateTopicPin(topicId, !topic?.pinned); }
+      else if (action === 'rename') { const newName = prompt('Enter new session name:', topicName); if (newName?.trim()) await updateTopicName(topicId, newName.trim()); }
+      else if (action === 'delete') { if (confirm('Delete this session?')) { await deleteTopic(topicId); if (currentChatId === topicId) { currentChatId = null; document.getElementById('messagesContainer').innerHTML = ''; createNewChat(); } await loadChatList(); } }
+      menu.remove();
+    };
+    menu.querySelectorAll('.context-menu-item').forEach(item => { item.addEventListener('click', () => handleClick(item.dataset.action)); });
+    setTimeout(() => { document.addEventListener('click', () => { if(menu.parentNode) menu.remove(); }, { once: true }); }, 10);
+  }
+  
+  // File extraction
+  async function extractFileContent(file, onProgress) {
     const ext = file.name.split('.').pop().toLowerCase();
+    let text = `[FILE: ${file.name}]\n`;
+    if (onProgress) onProgress(10);
     if (ext === 'pdf') {
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let text = '';
-      for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
         text += content.items.map(item => item.str).join(' ') + '\n';
+        onProgress(30 + Math.floor((i / 10) * 60));
       }
-      return `📄 FILE PDF: ${file.name}\nJUMLAH HALAMAN: ${pdf.numPages}\n\nKONTEN:\n${text.substring(0, 8000)}`;
-    }
-    if (['xlsx','xls','csv'].includes(ext)) {
+    } else if (['xlsx','xls','csv'].includes(ext)) {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer);
-      let result = `📊 FILE EXCEL: ${file.name}\nJUMLAH SHEET: ${workbook.SheetNames.length}\n\n`;
       workbook.SheetNames.forEach(sheet => {
         const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 });
-        result += `=== SHEET: ${sheet} ===\n`;
-        if (data.length > 0) {
-          const headers = data[0] || [];
-          result += `KOLOM: ${headers.join(', ')}\n`;
-          result += `JUMLAH BARIS DATA: ${data.length - 1}\n`;
-          result += `PREVIEW (5 baris pertama):\n${JSON.stringify(data.slice(0, 6), null, 2)}\n`;
-        }
-        result += '\n';
+        text += `\n[Sheet: ${sheet}]\nPreview:\n${JSON.stringify(data.slice(0, 10), null, 2)}\n`;
       });
-      return result.substring(0, 8000);
-    }
-    if (ext === 'docx') {
+      onProgress(80);
+    } else if (ext === 'docx') {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer });
-      return `📝 FILE WORD: ${file.name}\n\nKONTEN:\n${result.value.substring(0, 8000)}`;
-    }
-    if (ext === 'pptx') {
-      return `📽️ FILE POWERPOINT: ${file.name}\nUkuran: ${(file.size/1024).toFixed(1)} KB\n(Catatan: Untuk analisis terbaik, konversi ke PDF terlebih dahulu)`;
-    }
-    if (['png','jpg','jpeg','bmp','webp'].includes(ext)) {
+      text += result.value;
+      onProgress(80);
+    } else if (['png','jpg','jpeg'].includes(ext)) {
       const url = URL.createObjectURL(file);
+      const { data: { text: ocrText } } = await Tesseract.recognize(url, 'ind+eng');
+      URL.revokeObjectURL(url);
+      text += ocrText;
+      onProgress(80);
+    } else { text += await file.text(); onProgress(80); }
+    onProgress(100);
+    return { name: file.name, extractedText: text.substring(0, 6000) };
+  }
+  
+  async function handleMultiFileUpload(files) {
+    const previewContainer = document.getElementById('multiFilePreview');
+    const previewList = document.getElementById('filePreviewList');
+    previewContainer.classList.remove('hidden');
+    for (const file of files) {
+      const fileId = Date.now() + '_' + Math.random();
+      const progressDiv = document.createElement('div');
+      progressDiv.className = 'file-card flex items-center gap-2 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1.5 min-w-[130px]';
+      progressDiv.innerHTML = `<i class="fas fa-file text-neon-purple text-xs"></i><div class="flex-1"><p class="text-xs truncate">${file.name}</p><div class="w-full bg-gray-800 rounded-full h-1"><div class="progress-bar bg-gradient-to-r from-neon-purple to-neon-pink h-1 rounded-full" style="width:0%"></div></div></div>`;
+      previewList.appendChild(progressDiv);
       try {
-        const { data: { text } } = await Tesseract.recognize(url, 'ind+eng');
-        URL.revokeObjectURL(url);
-        return `🖼️ FILE GAMBAR: ${file.name}\n\nHASIL OCR (TEKS DALAM GAMBAR):\n${text.substring(0, 5000) || '(Tidak ada teks terdeteksi)'}`;
-      } catch(err) {
-        URL.revokeObjectURL(url);
-        return `🖼️ FILE GAMBAR: ${file.name}\nUkuran: ${(file.size/1024).toFixed(1)} KB\n(Gagal OCR: ${err.message})`;
-      }
+        const extracted = await extractFileContent(file, (p) => { const bar = progressDiv.querySelector('.progress-bar'); if (bar) bar.style.width = p + '%'; });
+        uploadedFiles.push({ id: fileId, ...extracted });
+        progressDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 text-xs"></i><div class="flex-1"><p class="text-xs truncate text-green-400">${file.name}</p></div><button class="remove-file text-gray-500 hover:text-red-500 text-xs" data-id="${fileId}"><i class="fas fa-times"></i></button>`;
+        progressDiv.querySelector('.remove-file')?.addEventListener('click', () => { uploadedFiles = uploadedFiles.filter(f => f.id !== fileId); progressDiv.remove(); if (uploadedFiles.length === 0) previewContainer.classList.add('hidden'); document.getElementById('fileCount').innerText = `${uploadedFiles.length} file`; });
+      } catch(err) { progressDiv.innerHTML = `<div class="text-red-500 text-xs">✖ ${file.name}</div>`; }
     }
-    if (ext === 'txt') {
-      const text = await file.text();
-      return `📄 FILE TEKS: ${file.name}\n\nKONTEN:\n${text.substring(0, 8000)}`;
-    }
-    return `FILE: ${file.name}\nUkuran: ${(file.size/1024).toFixed(1)} KB`;
+    document.getElementById('fileCount').innerText = `${uploadedFiles.length} file`;
   }
   
-  // ========== GENERATE FILE ==========
-  function generateDocFile(content, filename) {
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filename}</title><style>body{font-family:Arial,sans-serif;padding:40px;max-width:800px;margin:0 auto;line-height:1.6;}h1{color:#2c3e50;}h2{color:#34495e;}table{border-collapse:collapse;width:100%;margin:15px 0;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background:#f5f5f5;}pre{background:#f4f4f4;padding:10px;overflow-x:auto;}code{font-family:monospace;}</style></head><body>${content}</body></html>`;
-    const blob = htmlDocx.asBlob(html);
-    return { url: URL.createObjectURL(blob), filename: `${filename}.docx`, type: 'docx' };
-  }
-  
-  function generatePDFFromContent(content, filename) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const plainText = content.replace(/<[^>]*>/g, '');
-    const lines = doc.splitTextToSize(plainText, 170);
-    let y = 20;
-    for (let line of lines) {
-      if (y > 280) { doc.addPage(); y = 20; }
-      doc.text(line, 15, y);
-      y += 7;
+  async function sendToAI(message, fileContext = null) {
+    startThinkingProcess(!!fileContext);
+    let fullMessage = message;
+    if (fileContext && fileContext.length > 0) {
+      fullMessage = `FILES:\n${fileContext.map(f => `[${f.name}]\n${f.extractedText.substring(0, 3000)}`).join('\n\n')}\n\nQUERY: ${message}`;
     }
-    return { url: URL.createObjectURL(doc.output('blob')), filename: `${filename}.pdf`, type: 'pdf' };
-  }
-  
-  function generateExcelFile(data, filename) {
-    let wsData;
-    if (typeof data === 'string') {
-      try { wsData = JSON.parse(data); } catch(e) { wsData = [[data]]; }
-    } else {
-      wsData = data;
-    }
-    if (!Array.isArray(wsData[0])) wsData = [wsData];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Data');
-    const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-    return { url: URL.createObjectURL(new Blob([buf], {type: 'application/octet-stream'})), filename: `${filename}.xlsx`, type: 'xlsx' };
-  }
-  
-  async function handleCreateFile(userMessage) {
-    showLoading("📝 AI sedang membuat file...");
-    const messages = [...conversationHistory, { role: "user", content: `BUAT FILE: ${userMessage}. Kembalikan JSON valid: {"fileType":"doc/pdf/xlsx/ppt","fileName":"nama_file","content":"isi_konten"}. Untuk Excel, content berupa array 2D. Untuk file lain, content berupa HTML atau markdown.` }];
+    const messages = [{ role: "system", content: "You are KIRO CLI, a terminal-style AI assistant. Respond in Indonesian with markdown format. Use code blocks with language identifiers." }, { role: "user", content: fullMessage }];
+    
+    currentAbortController = new AbortController();
+    
     try {
-      const res = await fetch(`${API_ENDPOINT}/chat/completions`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
-        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 4000 })
+      const response = await fetch(`${API_ENDPOINT}/chat/completions`, {
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2000 }),
+        signal: currentAbortController.signal
       });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      let aiResponse = data.choices[0].message.content;
       
-      let fileData = { fileType: 'doc', fileName: 'dokumen', content: aiResponse };
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try { fileData = JSON.parse(jsonMatch[0]); } catch(e) {}
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
+      const data = await response.json();
+      endThinkingProcess();
+      return data.choices[0].message.content;
+    } catch(err) {
+      endThinkingProcess();
+      if (err.name === 'AbortError') {
+        return null;
       }
-      
-      let result;
-      if (fileData.fileType === 'xlsx' || userMessage.toLowerCase().includes('excel')) {
-        result = generateExcelFile(fileData.content || [[fileData.fileName], [fileData.content]], fileData.fileName);
-      } else if (fileData.fileType === 'pdf' || userMessage.toLowerCase().includes('pdf')) {
-        result = generatePDFFromContent(fileData.content, fileData.fileName);
-      } else {
-        result = generateDocFile(fileData.content, fileData.fileName);
-      }
-      
-      hideLoading();
-      const icon = result.type === 'docx' ? 'fa-file-word' : (result.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-excel');
-      addMessageToUI('assistant', `✅ **File "${result.filename}" berhasil dibuat!**\n\n<div class="file-download-card"><i class="fas ${icon} fa-2x"></i><div><strong>${result.filename}</strong><br>Klik tombol di bawah untuk menyimpan</div><a href="${result.url}" download="${result.filename}" class="download-btn"><i class="fas fa-download"></i> Download File</a></div>\n\n📄 **Preview:**\n${aiResponse.substring(0, 800)}`);
-    } catch(err) {
-      hideLoading();
-      addMessageToUI('assistant', `❌ Gagal membuat file: ${err.message}`);
+      return `⚠️ Error: ${err.message}. Please try again.`;
+    } finally {
+      currentAbortController = null;
     }
   }
   
-  async function analyzeFile(file, question) {
-    showLoading("🔍 AI sedang membaca & menganalisis file...");
-    const content = await extractFileContent(file);
-    const messages = [...conversationHistory, { role: "user", content: `FILE: ${file.name}\n\nKONTEN FILE:\n${content}\n\nPERINTAH: ${question}\n\nLakukan sesuai perintah. Jika diminta ringkasan, berikan ringkasan. Jika diminta analisis data, berikan insight. Jika diminta revisi, hasilkan file revisi dalam JSON.` }];
-    try {
-      const res = await fetch(`${API_ENDPOINT}/chat/completions`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
-        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 3000 })
-      });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      const reply = data.choices[0].message.content;
-      hideLoading();
-      addMessageToUI('assistant', reply);
-      conversationHistory.push({ role: "user", content: `[FILE: ${file.name}] ${question}` }, { role: "assistant", content: reply });
-    } catch(err) {
-      hideLoading();
-      addMessageToUI('assistant', `❌ Error: ${err.message}`);
-    }
-  }
-  
-  async function sendRegularMessage(question) {
-    showLoading("💭 AI sedang berpikir...");
-    const messages = [...conversationHistory, { role: "user", content: question }];
-    try {
-      const res = await fetch(`${API_ENDPOINT}/chat/completions`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
-        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2500 })
-      });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      const reply = data.choices[0].message.content;
-      hideLoading();
-      addMessageToUI('assistant', reply);
-      conversationHistory.push({ role: "user", content: question }, { role: "assistant", content: reply });
-      if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-25);
-    } catch(err) {
-      hideLoading();
-      addMessageToUI('assistant', `❌ Error: ${err.message}. Cek koneksi atau coba model lain.`);
-    }
-  }
-  
-  // ========== UI HELPERS ==========
-  const messagesContainer = document.getElementById('messagesContainer');
-  const userInput = document.getElementById('userInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const attachBtn = document.getElementById('attachButton');
-  const fileInput = document.getElementById('fileInput');
-  
-  function scrollToBottom() { messagesContainer.scrollTop = messagesContainer.scrollHeight; }
-  function escapeHtml(str) { return str?.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) || ''; }
-  function renderMarkdown(text) { 
-    try { 
-      let html = marked.parse(text); 
-      setTimeout(() => document.querySelectorAll('pre code').forEach(hljs.highlightElement), 100); 
-      return html; 
-    } catch(e) { return text.replace(/\n/g, '<br>'); } 
-  }
-  
-  function addMessageToUI(role, content) {
+  async function addMessageWithTyping(role, content) {
+    const container = document.getElementById('messagesContainer');
     const div = document.createElement('div');
-    div.className = `message ${role === 'user' ? 'user-message' : 'assistant-message'}`;
-    div.innerHTML = `<div class="bubble">${role === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}</div>`;
-    messagesContainer.appendChild(div);
-    scrollToBottom();
+    const time = new Date().toLocaleTimeString();
+    
+    if (role === 'user') {
+      div.className = `flex justify-end mb-3`;
+      div.innerHTML = `<div class="max-w-[85%]"><div class="bg-gradient-to-r from-neon-purple/10 to-neon-pink/10 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-purple mb-1"><i class="fas fa-user-astronaut"></i> <span>kiro@user:~$</span></div><div class="text-gray-200 text-sm whitespace-pre-wrap break-words">${escapeHtml(content)}</div></div><div class="text-[10px] text-gray-600 mt-1 text-right">${time}</div></div>`;
+      container.appendChild(div);
+    } else {
+      div.className = `flex justify-start mb-3`;
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.className = 'max-w-[85%]';
+      bubbleDiv.innerHTML = `<div class="bg-black/50 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-cyan mb-1"><i class="fas fa-terminal"></i> <span>kiro@cli:~$</span></div><div class="message-typing-container message-content"></div></div><div class="text-[10px] text-gray-600 mt-1">${time}</div>`;
+      div.appendChild(bubbleDiv);
+      container.appendChild(div);
+      
+      const typingContainer = bubbleDiv.querySelector('.message-typing-container');
+      await typeMessageToElement(typingContainer, content);
+    }
+    container.scrollTop = container.scrollHeight;
+    
+    const welcome = container.querySelector('.flex-col.items-center');
+    if (welcome && container.children.length > 2) welcome.remove();
+    return div;
   }
   
-  let loadingDiv = null, loadingInterval = null;
-  const emoticons = ["🤔", "🧐", "📖", "🔍", "🤖✨", "📊", "✏️", "💭", "🚀", "⭐", "💡", "🎯"];
-  function showLoading(text = "Memproses...") {
-    if (loadingDiv) return;
-    loadingDiv = document.createElement('div');
-    loadingDiv.className = 'message assistant-message';
-    let idx = 0;
-    const update = () => { if(loadingDiv) loadingDiv.innerHTML = `<div class="bubble"><div class="loading-emoticon"><span class="loading-spinner-custom">${emoticons[idx%emoticons.length]}</span> ${text}</div></div>`; idx++; };
-    update();
-    messagesContainer.appendChild(loadingDiv);
-    scrollToBottom();
-    loadingInterval = setInterval(update, 600);
+  function escapeHtml(str) { return str?.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) || ''; }
+  
+  async function saveChatMessage(role, content) {
+    if (!currentChatId) await createNewChat();
+    await saveMessage({ topicId: currentChatId, role, content, time: new Date().toLocaleTimeString(), timestamp: Date.now() });
+    const topics = await getAllTopics();
+    const topic = topics.find(t => t.id === currentChatId);
+    if (topic) { topic.updatedAt = Date.now(); topic.preview = content.substring(0, 40); await saveTopic(topic); }
+    await loadChatList();
   }
-  function hideLoading() { if(loadingInterval) clearInterval(loadingInterval); if(loadingDiv) loadingDiv.remove(); loadingDiv = null; }
+  
+  async function loadChatList() {
+    let topics = await getAllTopics();
+    const searchTerm = document.getElementById('searchChat')?.value.toLowerCase() || '';
+    if (searchTerm) topics = topics.filter(t => t.name.toLowerCase().includes(searchTerm));
+    const pinned = topics.filter(t => t.pinned).sort((a,b) => b.updatedAt - a.updatedAt);
+    const unpinned = topics.filter(t => !t.pinned).sort((a,b) => b.updatedAt - a.updatedAt);
+    const container = document.getElementById('chatList');
+    if (topics.length === 0) { container.innerHTML = `<div class="text-center text-gray-600 text-xs py-8"><i class="fas fa-terminal text-2xl mb-2 block"></i>no sessions</div>`; return; }
+    container.innerHTML = [...pinned, ...unpinned].map(topic => `
+      <div class="chat-item group px-3 py-2 hover:bg-gradient-to-r hover:from-neon-purple/10 cursor-pointer transition border-l-2 border-transparent hover:border-neon-purple" data-id="${topic.id}">
+        <div class="flex items-center gap-2">
+          <i class="fas ${topic.pinned ? 'fa-thumbtack text-neon-orange rotate-45' : 'fa-hashtag text-neon-purple/50'} text-xs"></i>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-mono truncate text-gray-300">${escapeHtml(topic.name)}</span>
+              <button class="session-menu-btn text-gray-500 hover:text-neon-purple opacity-0 group-hover:opacity-100 transition p-1" data-id="${topic.id}" data-name="${escapeHtml(topic.name)}"><i class="fas fa-ellipsis-v text-xs"></i></button>
+            </div>
+            <p class="text-[10px] text-gray-600 truncate">${escapeHtml(topic.preview || 'click to open')}</p>
+          </div>
+        </div>
+      </div>
+    `).join('');
+    document.querySelectorAll('.chat-item').forEach(el => { el.addEventListener('click', (e) => { if (!e.target.closest('.session-menu-btn')) loadChat(parseInt(el.dataset.id)); }); });
+    document.querySelectorAll('.session-menu-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); showContextMenu(e, parseInt(btn.dataset.id), btn.dataset.name); }); });
+  }
+  
+  async function loadChat(topicId) {
+    if (isGenerating) {
+      stopChatGeneration();
+    }
+    
+    currentChatId = topicId;
+    const messages = await getMessagesByTopic(topicId);
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '';
+    for (const msg of messages.sort((a,b) => a.timestamp - b.timestamp)) {
+      await addMessageWithTyping(msg.role, msg.content);
+    }
+    if (messages.length === 0) await addMessageWithTyping('assistant', '✓ Session ready.\n\n💡 **Tips:** \n• Klik tombol **Run Code** di **bawah** setiap blok kode\n• Sidebar bisa di-**hide** untuk ruang chat lebih luas\n• Output console otomatis terbuka saat run code');
+    if (window.innerWidth < 768) closeMobileSidebar();
+  }
+  
+  async function createNewChat() {
+    if (isGenerating) {
+      stopChatGeneration();
+    }
+    
+    const newTopic = { name: `session_${new Date().toLocaleTimeString()}`, preview: 'new session', updatedAt: Date.now(), createdAt: Date.now(), pinned: false };
+    const id = await saveTopic(newTopic);
+    currentChatId = id;
+    uploadedFiles = [];
+    document.getElementById('messagesContainer').innerHTML = '';
+    document.getElementById('multiFilePreview').classList.add('hidden');
+    document.getElementById('filePreviewList').innerHTML = '';
+    document.getElementById('fileCount').innerText = '0 files';
+    await addMessageWithTyping('assistant', '✓ KIRO CLI v8.0 ready!\n\n**New Features:**\n• **Stop Chat** button untuk menghentikan generasi\n• **Hide/Show Sidebar** untuk ruang lebih luas\n• Buttons di **BAWAH** setiap code block\n• **Smooth typing** tanpa glitch\n• Auto-open output console\n\nUpload files or type your question!');
+    await loadChatList();
+    if (window.innerWidth < 768) closeMobileSidebar();
+  }
+  
+  // Event Handlers
+  const sendBtn = document.getElementById('sendBtn');
+  const attachBtn = document.getElementById('attachBtn');
+  const fileInput = document.getElementById('fileInput');
+  const userInput = document.getElementById('userInput');
+  const newChatBtn = document.getElementById('newChatBtn');
+  const modelSelect = document.getElementById('modelSelect');
+  const searchChat = document.getElementById('searchChat');
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const toggleOutputBtn = document.getElementById('toggleOutputBtn');
+  const closeOutputBtn = document.getElementById('closeOutputBtn');
+  const clearOutputBtn = document.getElementById('clearOutputBtn');
+  const outputArea = document.getElementById('outputArea');
+  const toggleSidebarMainBtn = document.getElementById('toggleSidebarMainBtn');
+  const hideSidebarInternalBtn = document.getElementById('hideSidebarInternalBtn');
+  const stopChatBtn = document.getElementById('stopChatBtn');
+  
+  toggleOutputBtn.addEventListener('click', () => outputArea.classList.toggle('open'));
+  closeOutputBtn.addEventListener('click', () => outputArea.classList.remove('open'));
+  clearOutputBtn.addEventListener('click', () => { 
+    document.getElementById('outputContent').innerHTML = '<div class="text-gray-500 text-center py-10">▶ Console cleared. Run code to see results here</div>';
+  });
+  
+  // Event untuk toggle sidebar (show/hide)
+  toggleSidebarMainBtn.addEventListener('click', toggleSidebarHideShow);
+  if (hideSidebarInternalBtn) {
+    hideSidebarInternalBtn.addEventListener('click', hideSidebar);
+  }
+  
+  stopChatBtn.addEventListener('click', stopChatGeneration);
   
   attachBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    uploadedFile = file;
-    const panel = document.getElementById('activeFilePanel');
-    panel.style.display = 'flex';
-    panel.innerHTML = `<span><i class="fas fa-file"></i> <strong>${file.name}</strong> sudah diupload</span><button id="removeFileBtn" class="remove-file-btn"><i class="fas fa-times"></i> Hapus</button>`;
-    document.getElementById('removeFileBtn')?.addEventListener('click', () => { uploadedFile = null; panel.style.display = 'none'; addMessageToUI('assistant', '🗑️ File dihapus. Upload lagi jika perlu.'); });
-    addMessageToUI('user', `📎 Upload file: ${file.name}`);
-    await analyzeFile(file, "Buat ringkasan singkat isi file ini dan beri tahu aku bisa bertanya apa saja tentang file ini.");
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      await addMessageWithTyping('user', `$ upload ${files.length} file(s): ${files.map(f => f.name).join(', ')}`);
+      await saveChatMessage('user', `upload ${files.length} file(s)`);
+      await handleMultiFileUpload(files);
+    }
     fileInput.value = '';
   });
   
   async function sendMessage() {
+    if (isGenerating) {
+      showOutputMessage("Chat is already generating. Use Stop button to cancel.", "warning");
+      return;
+    }
+    
     const text = userInput.value.trim();
-    if (!text) { alert("Ketik perintah!"); return; }
-    addMessageToUI('user', text);
-    userInput.value = '';
-    userInput.style.height = 'auto';
+    if (!text && uploadedFiles.length === 0) return;
     
-    const createKeywords = ['buat', 'buatkan', 'generate', 'bikin', 'create', 'buat file'];
-    const isCreate = createKeywords.some(k => text.toLowerCase().includes(k)) && 
-                     (text.toLowerCase().includes('makalah') || text.toLowerCase().includes('excel') || 
-                      text.toLowerCase().includes('presentasi') || text.toLowerCase().includes('ppt') || 
-                      text.toLowerCase().includes('surat') || text.toLowerCase().includes('laporan') ||
-                      text.toLowerCase().includes('dokumen') || text.toLowerCase().includes('proposal'));
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = '0.5';
+    isGenerating = true;
+    stopChatBtn.style.display = 'flex';
     
-    if (isCreate) {
-      await handleCreateFile(text);
-    } else if (uploadedFile) {
-      await analyzeFile(uploadedFile, text);
-    } else {
-      await sendRegularMessage(text);
+    try {
+      if (text) {
+        await addMessageWithTyping('user', text);
+        await saveChatMessage('user', text);
+      }
+      userInput.value = '';
+      userInput.style.height = 'auto';
+      
+      const response = await sendToAI(text || "analyze all uploaded files", uploadedFiles.length > 0 ? uploadedFiles : null);
+      
+      if (response) {
+        await addMessageWithTyping('assistant', response);
+        await saveChatMessage('assistant', response);
+      } else if (response === null) {
+        console.log("Generation stopped by user");
+      }
+    } finally {
+      isGenerating = false;
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
+      stopChatBtn.style.display = 'none';
     }
   }
   
   sendBtn.addEventListener('click', sendMessage);
   userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-  userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(100, this.scrollHeight) + 'px'; });
-  modelSelect.addEventListener('change', (e) => { currentModel = e.target.value; addMessageToUI('assistant', `🔄 Model AI diubah ke ${currentModel}`); });
-  
-  document.getElementById('newChatBtn')?.addEventListener('click', () => {
-    messagesContainer.innerHTML = '';
-    conversationHistory = [{ role: "system", content: conversationHistory[0].content }];
-    uploadedFile = null;
-    document.getElementById('activeFilePanel').style.display = 'none';
-    addMessageToUI('assistant', "✨ Chat baru! Kirim perintah apapun, aku akan bantu.");
+  userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(80, this.scrollHeight) + 'px'; });
+  newChatBtn.addEventListener('click', () => createNewChat());
+  modelSelect.addEventListener('change', (e) => { 
+    currentModel = e.target.value; 
+    addMessageWithTyping('assistant', `✓ Model switched to ${currentModel}`);
   });
-  document.getElementById('clearChatBtn')?.addEventListener('click', () => {
-    messagesContainer.innerHTML = '';
-    conversationHistory = [{ role: "system", content: conversationHistory[0].content }];
-    addMessageToUI('assistant', "🧹 Riwayat chat dihapus.");
+  searchChat.addEventListener('input', () => loadChatList());
+  mobileMenuBtn.addEventListener('click', () => openMobileSidebar());
+  
+  document.querySelectorAll('.quick-cmd').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (btn.innerText.includes('upload')) attachBtn.click();
+      if (btn.innerText.includes('run')) toggleOutputBtn.click();
+      if (btn.innerText.includes('pin')) { const firstTopic = document.querySelector('.chat-item'); if(firstTopic) showContextMenu(e, parseInt(firstTopic.dataset.id), 'session'); }
+    });
   });
   
-  scrollToBottom();
+  window.addEventListener('resize', () => {
+    const isMobile = window.innerWidth <= 768;
+    const sidebar = document.getElementById('sidebar');
+    
+    if (!isMobile) {
+      sidebar.classList.remove('mobile-open');
+      document.getElementById('sidebarOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+      
+      const saved = localStorage.getItem('sidebarHidden');
+      if (saved === 'true') {
+        sidebar.classList.add('hidden-sidebar');
+        isSidebarHidden = true;
+      } else {
+        sidebar.classList.remove('hidden-sidebar');
+        isSidebarHidden = false;
+      }
+    } else {
+      sidebar.classList.remove('hidden-sidebar');
+      if (localStorage.getItem('sidebarHidden') === 'true') {
+        closeMobileSidebar();
+      } else {
+        // jangan auto open agar tidak mengganggu
+      }
+    }
+  });
+  
+  // Initialize
+  initDB().then(() => { 
+    loadChatList(); 
+    createNewChat();
+    loadSidebarState();
+  });
+  
+  // Preload Pyodide
+  setTimeout(() => { initPyodide().catch(console.error); }, 5000);
 </script>
 </body>
 </html>

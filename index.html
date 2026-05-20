@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
   <meta name="theme-color" content="#0a0a0a">
-  <meta name="description" content="KURO CLI - Terminal AI Assistant dengan Voice Input, Code Runner, dan PWA Support">
+  <meta name="description" content="KURO CLI - Terminal AI Assistant dengan Voice Input, Code Runner, File Editor, dan PWA Support">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5969/5969020.png">
-  <title>KURO CLI · Terminal AI Assistant with Voice & PWA</title>
+  <title>KURO CLI · Terminal AI Assistant with Voice, Python & File Editor</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome -->
@@ -26,7 +26,7 @@
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
   
   <style>
-    /* All existing styles */
+    /* Animations */
     @keyframes blink {
       0%, 50% { opacity: 1; }
       51%, 100% { opacity: 0; }
@@ -40,16 +40,25 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.7; transform: scale(1.1); }
     }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     .cursor-blink::after { content: '█'; animation: blink 1s step-end infinite; margin-left: 2px; }
     .typing-dots span { animation: blinkDot 1.4s infinite; animation-fill-mode: both; }
     .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
     .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    
     @keyframes blinkDot {
       0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
       30% { opacity: 1; transform: translateY(-4px); }
     }
-    .progress-bar { transition: width 0.3s ease; }
     
+    .progress-bar { transition: width 0.3s ease; }
+    .spin-animation { animation: spin 1s linear infinite; }
+    
+    /* Code block styles */
     .code-block-wrapper { 
       position: relative; 
       margin: 16px 0; 
@@ -74,7 +83,7 @@
       border-radius: 0 0 12px 12px;
       justify-content: flex-end;
     }
-    .copy-code-btn, .run-code-btn, .preview-code-btn {
+    .copy-code-btn, .run-code-btn, .preview-code-btn, .edit-file-btn {
       padding: 4px 12px;
       border-radius: 6px;
       font-size: 11px;
@@ -110,11 +119,22 @@
       background: rgba(236, 72, 153, 0.4);
       transform: translateY(-1px);
     }
+    .edit-file-btn {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.5);
+      color: #fbbf24;
+    }
+    .edit-file-btn:hover {
+      background: rgba(245, 158, 11, 0.4);
+      transform: translateY(-1px);
+    }
     
+    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0a0a0a; }
     ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #8b5cf6, #ec4899); border-radius: 3px; }
     
+    /* Layout */
     .split-layout {
       display: flex;
       flex-direction: row;
@@ -141,6 +161,51 @@
     .output-area.open {
       width: 45%;
       border-left: 2px solid #8b5cf6;
+    }
+    
+    /* File Editor Modal */
+    .file-editor-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 1001;
+      display: none;
+      flex-direction: column;
+    }
+    .file-editor-modal.active {
+      display: flex;
+    }
+    .editor-header {
+      background: #1a1a1a;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f59e0b;
+    }
+    .editor-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    .editor-textarea {
+      flex: 1;
+      background: #0a0a0a;
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #e5e5e5;
+      resize: none;
+      outline: none;
+    }
+    .editor-textarea:focus {
+      border-color: #8b5cf6;
     }
     
     /* Preview Modal */
@@ -173,6 +238,7 @@
       background: white;
     }
     
+    /* Sidebar */
     .sidebar {
       width: 280px;
       min-width: 280px;
@@ -195,6 +261,7 @@
     }
     .sidebar.hidden-sidebar .sidebar-content { display: none; }
     
+    /* Badges */
     .topic-badge {
       background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
       border: 1px solid rgba(139, 92, 246, 0.5);
@@ -205,24 +272,26 @@
       align-items: center;
       gap: 6px;
     }
-    
-    /* Voice Recording Animation */
-    .voice-recording {
-      animation: pulse 1s infinite;
-      background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    .python-badge {
+      background: linear-gradient(135deg, #306998, #FFD43B);
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: bold;
     }
     
+    /* Voice Recording */
     .voice-btn.listening {
       background: linear-gradient(135deg, #ef4444, #dc2626) !important;
       box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
     }
-    
-    /* TTS Toggle */
     .tts-active {
       background: linear-gradient(135deg, #22c55e, #16a34a) !important;
       border-color: #22c55e !important;
     }
     
+    /* Mobile */
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
@@ -244,23 +313,38 @@
       .output-area.open { width: 100%; position: fixed; right: 0; top: 0; height: 100%; z-index: 200; border-left: none; border-right: 2px solid #8b5cf6; background: #0a0a0a; }
       .output-area.open .close-output-mobile { display: block !important; }
       .close-output-mobile { display: none; }
-      .chat-area .bg-\[\#0a0a0a\]\/80 { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
-      .chat-area .bg-\[\#0a0a0a\]\/80 > div:last-child { flex-wrap: wrap; justify-content: flex-start; margin-top: 4px; }
-      #userInput { font-size: 14px; }
-      .p-3 { padding: 8px 12px; }
-      .max-w-\[85\%\] { max-width: 90%; }
-      .rounded-2xl { border-radius: 18px; }
-      #filePreviewList { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
-      #messagesContainer { padding-bottom: 80px; }
+      
+      .menu-bar-mobile {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 10px;
+        background: rgba(10, 10, 10, 0.9);
+        border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+      }
+      .menu-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 500;
+        background: rgba(139, 92, 246, 0.15);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        transition: all 0.2s;
+      }
+      .menu-item i { font-size: 10px; }
+      .desktop-menu { display: none !important; }
     }
     
-    @media (max-width: 480px) {
-      .chat-area .bg-\[\#0a0a0a\]\/80 > div:first-child { width: 100%; justify-content: space-between; }
-      .chat-area .bg-\[\#0a0a0a\]\/80 > div:last-child { width: 100%; justify-content: space-between; }
-      .code-buttons-bar button { padding: 4px 8px; font-size: 10px; }
-      .text-xs { font-size: 11px; }
+    @media (min-width: 769px) {
+      .menu-bar-mobile { display: none !important; }
+      .desktop-menu { display: flex !important; }
     }
     
+    /* Output styles */
     .output-header { background: #1a1a1a; padding: 12px 16px; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center; }
     .output-content { flex: 1; overflow-y: auto; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #050505; }
     .output-success { color: #4ade80; border-left: 3px solid #4ade80; padding: 8px 12px; background: rgba(74, 222, 128, 0.1); border-radius: 8px; margin: 8px 0; }
@@ -269,25 +353,18 @@
     
     .gradient-text { background: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: gradientBg 3s ease infinite; }
     
+    /* Context Menu */
     .context-menu { position: fixed; background: #0a0a0a; border: 1px solid #8b5cf6; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); z-index: 1000; overflow: hidden; min-width: 160px; }
     .context-menu-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; transition: all 0.1s; }
     .context-menu-item:hover { background: rgba(139, 92, 246, 0.2); }
-    .file-card { transition: all 0.2s; }
-    .file-card:hover { transform: translateY(-2px); border-color: #8b5cf6; }
     
+    /* Thinking Process */
     .thinking-process { background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1)); border-left: 3px solid #8b5cf6; padding: 10px 16px; margin: 8px 0; border-radius: 12px; font-size: 12px; font-family: monospace; }
     .thinking-step { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: #a78bfa; }
     .thinking-step i { width: 18px; font-size: 12px; }
     .thinking-step.completed { color: #4ade80; }
     
-    .typing-code-container { font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; word-break: break-word; }
-    .message-content { line-height: 1.6; }
-    .message-content p { margin-bottom: 12px; }
-    .message-content code { background: rgba(139, 92, 246, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
-    
-    .stop-chat-btn, .toggle-sidebar-btn, .theme-toggle-btn, .voice-btn, .tts-toggle-btn { transition: all 0.2s; }
-    .stop-chat-btn:hover, .toggle-sidebar-btn:hover, .theme-toggle-btn:hover, .voice-btn:hover, .tts-toggle-btn:hover { transform: scale(1.05); }
-    
+    /* Light Mode */
     body.light-mode {
       background: linear-gradient(135deg, #f0f0f0, #e0e0e8, #f5f5f5);
       color: #1a1a2e;
@@ -296,38 +373,18 @@
     body.light-mode .chat-area .bg-\[\#0a0a0a\]\/80 { background: rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(139, 92, 246, 0.3); }
     body.light-mode .bg-black\/50, body.light-mode .bg-black\/40, body.light-mode .bg-black\/30 { background: rgba(0, 0, 0, 0.05); }
     body.light-mode .text-gray-200, body.light-mode .text-gray-300, body.light-mode .text-gray-400 { color: #333; }
-    body.light-mode .border-neon-purple\/30, body.light-mode .border-neon-purple\/20 { border-color: rgba(139, 92, 246, 0.2); }
     body.light-mode .output-area { background: #fafafa; }
     body.light-mode .output-header { background: #e0e0e0; border-bottom: 1px solid #ccc; }
     body.light-mode .output-content { background: #ffffff; }
-    body.light-mode ::-webkit-scrollbar-track { background: #e0e0e0; }
     body.light-mode .code-block-wrapper pre { background: linear-gradient(135deg, #f0f0f0, #f8f8f8); border: 1px solid rgba(139, 92, 246, 0.3); color: #333; }
     body.light-mode .code-buttons-bar { background: rgba(240, 240, 240, 0.95); border: 1px solid rgba(139, 92, 246, 0.3); }
+    body.light-mode .editor-textarea { background: #fafafa; color: #1a1a2e; }
     
-    @supports (padding: max(0px)) {
-      .sidebar, .output-area.open { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
-    }
-    
-    .shortcut-hint {
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(8px);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 10px;
-      color: #8b5cf6;
-      border: 1px solid rgba(139, 92, 246, 0.3);
-      pointer-events: none;
-      z-index: 40;
-    }
-    
-    /* Drag & Drop Zone */
-    .drag-over {
-      border: 2px dashed #8b5cf6 !important;
-      background: rgba(139, 92, 246, 0.1) !important;
-    }
+    /* Misc */
+    .shortcut-hint { position: fixed; bottom: 80px; right: 20px; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 20px; font-size: 10px; color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3); pointer-events: none; z-index: 40; }
+    .drag-over { border: 2px dashed #8b5cf6 !important; background: rgba(139, 92, 246, 0.1) !important; }
+    .file-card { transition: all 0.2s; }
+    .file-card:hover { transform: translateY(-2px); border-color: #8b5cf6; }
   </style>
   
   <script>
@@ -345,6 +402,27 @@
 
 <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeMobileSidebar()"></div>
 
+<!-- File Editor Modal -->
+<div id="fileEditorModal" class="file-editor-modal">
+  <div class="editor-header">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-edit text-neon-orange"></i>
+      <span class="text-sm font-bold" id="editorFileName">File Editor</span>
+    </div>
+    <div class="flex gap-2">
+      <button id="saveFileBtn" class="bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
+        <i class="fas fa-save mr-1"></i> Save
+      </button>
+      <button id="closeEditorBtn" class="text-gray-400 hover:text-white px-3 py-1 rounded bg-black/50">
+        <i class="fas fa-times"></i> Close
+      </button>
+    </div>
+  </div>
+  <div class="editor-content">
+    <textarea id="editorTextarea" class="editor-textarea" placeholder="Edit file content here..."></textarea>
+  </div>
+</div>
+
 <!-- Preview Modal -->
 <div id="previewModal" class="preview-modal">
   <div class="preview-header">
@@ -361,6 +439,7 @@
 
 <div class="split-layout">
   
+  <!-- Sidebar -->
   <div id="sidebar" class="sidebar">
     <div class="p-3 border-b border-neon-purple/20 flex items-center justify-between">
       <div class="flex items-center gap-2 sidebar-content">
@@ -382,13 +461,15 @@
     <div id="chatList" class="flex-1 overflow-y-auto py-2 sidebar-content"></div>
     <div class="p-3 border-t border-neon-purple/20 text-[10px] text-gray-500 flex justify-between sidebar-content">
       <span><i class="fas fa-brain text-neon-purple"></i> 75+ models</span>
-      <span><i class="fas fa-play text-neon-green"></i> Run Code</span>
-      <span><i class="fas fa-microphone text-neon-pink"></i> Voice</span>
+      <span><i class="fab fa-python text-neon-cyan"></i> Python Ready</span>
+      <span><i class="fas fa-edit text-neon-orange"></i> Edit Files</span>
     </div>
   </div>
   
+  <!-- Chat Area -->
   <div class="chat-area flex flex-col">
     
+    <!-- Header -->
     <div class="bg-[#0a0a0a]/80 backdrop-blur-sm border-b border-neon-purple/30 px-4 py-2 flex items-center justify-between flex-wrap gap-2">
       <div class="flex items-center gap-3">
         <div class="flex gap-1.5">
@@ -399,41 +480,41 @@
         <button id="toggleSidebarMainBtn" class="toggle-sidebar-btn p-1.5 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition" title="Toggle Sidebar">
           <i class="fas fa-bars text-neon-purple text-sm"></i>
         </button>
-        <button id="mobileMenuBtn" class="md:hidden text-neon-purple text-lg"><i class="fas fa-bars"></i></button>
         <div class="flex items-center gap-2">
           <i class="fas fa-terminal text-neon-purple text-sm animate-pulse"></i>
           <span class="text-sm text-gray-300">kuro@cli:~</span>
         </div>
-        <div class="hidden md:block text-xs gradient-text font-bold">[KURO AI v2.0 · Voice + PWA]</div>
+        <div class="hidden md:block text-xs gradient-text font-bold">[KURO AI v2.0 · Python + File Editor]</div>
       </div>
-      <div class="flex items-center gap-2 text-xs flex-wrap">
+      
+      <!-- Desktop Menu -->
+      <div class="desktop-menu flex items-center gap-2 text-xs flex-wrap">
         <div id="topicBadge" class="topic-badge hidden">
           <i class="fas fa-hashtag"></i>
           <span id="topicName">General</span>
-          <i class="fas fa-lock text-[10px] opacity-70"></i>
         </div>
-        <!-- TTS Toggle Button -->
-        <button id="ttsToggleBtn" class="tts-toggle-btn bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" title="Text-to-Speech">
+        <span class="python-badge"><i class="fab fa-python mr-1"></i>Python</span>
+        <button id="ttsToggleBtnDesktop" class="tts-toggle-btn bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-volume-up mr-1"></i> TTS Off
         </button>
-        <button id="exportChatBtn" class="bg-gradient-to-r from-neon-green/20 to-neon-cyan/20 border border-neon-green/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" title="Export Chat">
+        <button id="exportChatBtnDesktop" class="bg-gradient-to-r from-neon-green/20 to-neon-cyan/20 border border-neon-green/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-download mr-1"></i> Export
         </button>
-        <button id="clearChatBtn" class="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" title="Clear Chat">
+        <button id="clearChatBtnDesktop" class="bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-trash-alt mr-1"></i> Clear
         </button>
-        <button id="themeToggleBtn" class="theme-toggle-btn bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
+        <button id="themeToggleBtnDesktop" class="theme-toggle-btn bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-moon mr-1"></i> Dark
         </button>
-        <button id="stopChatBtn" class="stop-chat-btn bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" style="display: none;">
+        <button id="stopChatBtnDesktop" class="stop-chat-btn bg-gradient-to-r from-red-500/20 to-red-600/20 border border-red-500/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition" style="display: none;">
           <i class="fas fa-stop-circle mr-1"></i> Stop
         </button>
-        <button id="toggleOutputBtn" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
+        <button id="toggleOutputBtnDesktop" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-terminal mr-1"></i> Output
         </button>
         <div class="flex items-center gap-1 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1">
           <i class="fas fa-microchip text-neon-cyan"></i>
-          <select id="modelSelect" class="bg-transparent text-gray-300 outline-none text-xs cursor-pointer max-w-[100px]">
+          <select id="modelSelectDesktop" class="bg-transparent text-gray-300 outline-none text-xs cursor-pointer max-w-[100px]">
             <option value="kr/claude-opus-4.7">🧠 claude</option>
             <option value="ag/gemini-3.1-pro-high">⭐ gemini</option>
             <option value="ag/claude-sonnet-4-6">⚡ sonnet</option>
@@ -442,34 +523,77 @@
         </div>
         <div class="flex items-center gap-1 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1">
           <i class="fas fa-database text-neon-orange"></i>
-          <span class="text-gray-400" id="fileCount">0</span>
+          <span class="text-gray-400" id="fileCountDesktop">0</span>
         </div>
-        <button id="newChatBtn" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
+        <button id="newChatBtnDesktop" class="bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition">
           <i class="fas fa-plus mr-1"></i> new
         </button>
       </div>
     </div>
     
+    <!-- Mobile Menu Bar -->
+    <div class="menu-bar-mobile">
+      <span class="python-badge" style="font-size: 10px;"><i class="fab fa-python"></i> Py</span>
+      <button id="ttsToggleBtnMobile" class="menu-item" title="Text-to-Speech">
+        <i class="fas fa-volume-up"></i> TTS
+      </button>
+      <button id="exportChatBtnMobile" class="menu-item" title="Export Chat">
+        <i class="fas fa-download"></i> Exp
+      </button>
+      <button id="clearChatBtnMobile" class="menu-item" title="Clear Chat">
+        <i class="fas fa-trash-alt"></i> Clr
+      </button>
+      <button id="themeToggleBtnMobile" class="menu-item" title="Theme">
+        <i class="fas fa-moon"></i> Mode
+      </button>
+      <button id="stopChatBtnMobile" class="menu-item" title="Stop" style="display: none;">
+        <i class="fas fa-stop-circle"></i> Stop
+      </button>
+      <button id="toggleOutputBtnMobile" class="menu-item" title="Output">
+        <i class="fas fa-terminal"></i> Out
+      </button>
+      <div class="menu-item" style="gap: 2px;">
+        <i class="fas fa-microchip text-neon-cyan"></i>
+        <select id="modelSelectMobile" class="bg-transparent text-gray-300 outline-none text-xs cursor-pointer" style="max-width: 70px;">
+          <option value="kr/claude-opus-4.7">🧠</option>
+          <option value="ag/gemini-3.1-pro-high">⭐</option>
+          <option value="ag/claude-sonnet-4-6">⚡</option>
+          <option value="cx/gpt-5.5">🚀</option>
+        </select>
+      </div>
+      <div class="menu-item">
+        <i class="fas fa-database text-neon-orange"></i>
+        <span id="fileCountMobile">0</span>
+      </div>
+      <button id="newChatBtnMobile" class="menu-item" title="New Chat">
+        <i class="fas fa-plus"></i> New
+      </button>
+    </div>
+    
+    <!-- Messages Container -->
     <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4" style="min-height: 0;">
       <div class="flex flex-col items-center justify-center min-h-[200px]">
         <div class="text-center space-y-3">
           <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-neon-purple to-neon-pink flex items-center justify-center animate-pulse">
             <i class="fas fa-terminal text-2xl text-white"></i>
           </div>
-          <p class="text-sm text-gray-400">KURO AI · Voice + PWA Ready</p>
+          <p class="text-sm text-gray-400">KURO AI · Python + File Editor Ready</p>
           <div class="flex gap-2 justify-center flex-wrap mt-2">
             <button class="quick-cmd bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition" data-cmd="/help">🆘 /help</button>
             <button class="quick-cmd bg-gradient-to-r from-neon-green/20 to-neon-purple/20 border border-neon-green/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition" data-cmd="/topic">🎯 /topic</button>
             <button class="quick-cmd bg-gradient-to-r from-neon-orange/20 to-neon-pink/20 border border-neon-orange/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition" data-cmd="/stats">📊 /stats</button>
+            <button class="quick-cmd bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 px-3 py-1 rounded-lg text-xs hover:scale-105 transition" data-cmd="/files">📁 /files</button>
           </div>
         </div>
       </div>
     </div>
     
+    <!-- File Preview -->
     <div id="multiFilePreview" class="hidden px-4 py-2 border-t border-neon-purple/20 bg-black/30">
       <div class="flex gap-2 overflow-x-auto pb-2" id="filePreviewList"></div>
     </div>
     
+    <!-- Thinking Process -->
     <div id="thinkingProcess" class="hidden px-4 py-2 border-t border-neon-purple/20 bg-black/40">
       <div class="thinking-process">
         <div id="thinkingSteps">
@@ -480,6 +604,7 @@
       </div>
     </div>
     
+    <!-- Typing Indicator -->
     <div id="typingIndicator" class="hidden px-4 py-2">
       <div class="flex items-center gap-2 text-neon-purple text-sm">
         <div class="typing-dots flex gap-1"><span>●</span><span>●</span><span>●</span></div>
@@ -487,6 +612,7 @@
       </div>
     </div>
     
+    <!-- Input Area -->
     <div class="border-t border-neon-purple/20 bg-black/40 backdrop-blur-sm">
       <div class="flex items-center gap-2 p-3">
         <div class="flex items-center gap-1 text-neon-purple text-sm">
@@ -494,30 +620,32 @@
           <span class="text-gray-500">$</span>
         </div>
         <div class="flex-1 relative">
-          <textarea id="userInput" rows="1" placeholder="Ask or type command... (🎤 click microphone to speak)" class="w-full bg-transparent border-none outline-none text-gray-200 text-sm resize-none font-mono py-2 placeholder:text-gray-600"></textarea>
+          <textarea id="userInput" rows="1" placeholder='Ask or type command..."' class="w-full bg-transparent border-none outline-none text-gray-200 text-sm resize-none font-mono py-2 placeholder:text-gray-600"></textarea>
         </div>
-        <!-- Voice Input Button -->
         <button id="voiceBtn" class="voice-btn p-2 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition" title="Voice Input">
           <i class="fas fa-microphone text-neon-pink text-sm"></i>
         </button>
         <button id="attachBtn" class="p-2 rounded-lg bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/30 hover:scale-105 transition">
           <i class="fas fa-paperclip text-neon-purple text-sm"></i>
         </button>
-        <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.xlsx,.xls,.csv,.docx,.pptx,.png,.jpg,.jpeg,.txt">
+        <input type="file" id="fileInput" class="hidden" multiple accept=".pdf,.xlsx,.xls,.csv,.docx,.pptx,.png,.jpg,.jpeg,.txt,.py,.js,.html,.css,.json,.md">
         <button id="sendBtn" class="px-4 py-2 rounded-lg bg-gradient-to-r from-neon-purple to-neon-pink hover:from-neon-pink hover:to-neon-purple transition-all text-sm font-bold shadow-lg">
           <i class="fas fa-paper-plane mr-1"></i> run
         </button>
       </div>
       <div class="px-3 pb-2 text-[10px] text-gray-600 flex gap-4 flex-wrap">
-        <span><i class="fas fa-upload text-neon-purple"></i> pdf/excel</span>
-        <span><i class="fas fa-play text-neon-green"></i> ▶ run code</span>
+        <span><i class="fab fa-python text-neon-cyan"></i> Run Python</span>
+        <span><i class="fas fa-edit text-neon-orange"></i> Edit Files</span>
+        <span><i class="fas fa-upload text-neon-purple"></i> pdf/excel/docx</span>
+        <span><i class="fas fa-play text-neon-green"></i> run code</span>
         <span><i class="fas fa-copy text-neon-cyan"></i> copy</span>
         <span><i class="fas fa-eye text-neon-pink"></i> preview</span>
-        <span><i class="fas fa-microphone text-neon-pink"></i> voice input</span>
+        <span><i class="fas fa-microphone text-neon-pink"></i> voice</span>
       </div>
     </div>
   </div>
   
+  <!-- Output Area -->
   <div id="outputArea" class="output-area">
     <div class="output-header">
       <div class="flex items-center gap-2">
@@ -536,33 +664,216 @@
 </div>
 
 <div class="shortcut-hint hidden md:block">
-  <i class="fas fa-keyboard"></i> Ctrl+Enter | 🎤 Voice
+  <i class="fas fa-keyboard"></i> Ctrl+Enter | 🎤 Voice | ✏️ Edit files
 </div>
 
 <script>
-  // ========== KONFIGURASI ==========
-  const API_ENDPOINT = "https://api.ahwanulm.me/v1";
-  const API_KEY = "sk-fae1327aa9f2c80b-xtrat0-faf14a55";
-  let currentModel = "kr/claude-opus-4.7";
-  let currentChatId = null;
-  let currentTopicFocus = null;
-  let uploadedFiles = [];
-  let pyodide = null;
-  let isTyping = false;
-  let currentAbortController = null;
-  let isGenerating = false;
-  let isSidebarHidden = false;
-  let isDarkMode = true;
-  let codeRunCount = 0;
-  
-  // ========== VOICE INPUT (Speech-to-Text) ==========
-  let recognition = null;
-  let isListening = false;
-  
-  function initSpeechRecognition() {
+// ==================== KONFIGURASI ====================
+const API_ENDPOINT = "https://api.ahwanulm.me/v1";
+const API_KEY = "sk-fae1327aa9f2c80b-xtrat0-faf14a55";
+let currentModel = "kr/claude-opus-4.7";
+let currentChatId = null;
+let currentTopicFocus = null;
+let uploadedFiles = [];
+let pyodide = null;
+let pyodideLoading = false;
+let pyodideReady = false;
+let isTyping = false;
+let currentAbortController = null;
+let isGenerating = false;
+let isSidebarHidden = false;
+let isDarkMode = true;
+let codeRunCount = 0;
+let storedFiles = new Map();
+let currentEditingFile = null;
+
+// ==================== PYTHON EXECUTION ====================
+async function initPyodide() {
+    if (pyodideReady && pyodide) {
+        return pyodide;
+    }
+    
+    if (pyodideLoading) {
+        showOutputMessage("⏳ Python environment is loading, please wait...", "warning");
+        while (pyodideLoading) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        return pyodide;
+    }
+    
+    pyodideLoading = true;
+    showOutputMessage("🐍 Loading Python environment (first load takes 10-15 seconds)...", "warning");
+    
+    try {
+        pyodide = await loadPyodide({
+            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+        });
+        
+        pyodideReady = true;
+        pyodideLoading = false;
+        
+        showOutputMessage("✅ Python environment ready! You can now run Python code.", "success");
+        
+        // Test Python
+        await pyodide.runPythonAsync("print('Python ready!')");
+        
+        return pyodide;
+    } catch (err) {
+        pyodideLoading = false;
+        showOutputMessage(`❌ Failed to load Python: ${err.message}`, "error");
+        throw err;
+    }
+}
+
+async function runPythonCode(code) {
+    if (!code || code.trim() === '') {
+        return { success: false, output: "No Python code to execute" };
+    }
+    
+    if (!pyodideReady) {
+        if (!pyodideLoading) {
+            showOutputMessage("🐍 Starting Python environment...", "warning");
+            await initPyodide();
+        } else {
+            showOutputMessage("⏳ Python is loading, please wait...", "warning");
+            let waitCount = 0;
+            while (!pyodideReady && waitCount < 30) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                waitCount++;
+            }
+            if (!pyodideReady) {
+                return { success: false, output: "Python environment failed to load. Please refresh and try again." };
+            }
+        }
+    }
+    
+    try {
+        pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+sys.stderr = StringIO()
+        `);
+        
+        await pyodide.runPythonAsync(code);
+        
+        const stdout = pyodide.runPython("sys.stdout.getvalue()");
+        const stderr = pyodide.runPython("sys.stderr.getvalue()");
+        
+        let result = stdout || "";
+        if (stderr) {
+            result += (result ? "\n\n" : "") + "[Error]:\n" + stderr;
+        }
+        if (!result.trim()) {
+            result = "✓ Code executed successfully (no output)";
+        }
+        
+        return { success: true, output: result };
+    } catch (err) {
+        let errorMsg = err.message;
+        const tracebackMatch = errorMsg.match(/Traceback.*\n(.*)/s);
+        if (tracebackMatch) errorMsg = tracebackMatch[1];
+        return { success: false, output: errorMsg };
+    }
+}
+
+// ==================== FILE EDITOR ====================
+async function extractDocxText(arrayBuffer) {
+    try {
+        const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+        return result.value;
+    } catch (e) {
+        return "Unable to extract text from DOCX";
+    }
+}
+
+async function editTextFile(filename, instruction) {
+    const fileData = storedFiles.get(filename);
+    if (!fileData) return { success: false, message: `File ${filename} not found` };
+    
+    const currentContent = fileData.content;
+    
+    const editPrompt = `Edit the following file content based on the instruction.
+    
+File: ${filename}
+Current content:
+--- START ---
+${currentContent.substring(0, 6000)}
+--- END ---
+
+Instruction: ${instruction}
+
+Return ONLY the complete edited file content. Do not add explanations.`;
+    
+    try {
+        const response = await fetch(`${API_ENDPOINT}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+            body: JSON.stringify({
+                model: currentModel,
+                messages: [{ role: "system", content: "You are a text editor. Return only the edited file content." }, { role: "user", content: editPrompt }],
+                stream: false,
+                max_tokens: 4000
+            })
+        });
+        const data = await response.json();
+        const editedContent = data.choices[0].message.content;
+        
+        storedFiles.set(filename, { ...fileData, content: editedContent, edited: true });
+        
+        return { success: true, message: `File "${filename}" has been edited!`, newContent: editedContent };
+    } catch (err) {
+        return { success: false, message: `Error: ${err.message}` };
+    }
+}
+
+function openFileEditor(filename) {
+    const fileData = storedFiles.get(filename);
+    if (!fileData) {
+        showOutputMessage(`File "${filename}" not found. Upload it first.`, "error");
+        return;
+    }
+    
+    currentEditingFile = filename;
+    document.getElementById('editorFileName').textContent = `✏️ Editing: ${filename}`;
+    document.getElementById('editorTextarea').value = fileData.content || "No content";
+    document.getElementById('fileEditorModal').classList.add('active');
+}
+
+function closeFileEditor() {
+    document.getElementById('fileEditorModal').classList.remove('active');
+    currentEditingFile = null;
+}
+
+async function saveEditedFile() {
+    if (!currentEditingFile) return;
+    
+    const newContent = document.getElementById('editorTextarea').value;
+    const fileData = storedFiles.get(currentEditingFile);
+    
+    storedFiles.set(currentEditingFile, { ...fileData, content: newContent, edited: true });
+    
+    showOutputMessage(`✅ File "${currentEditingFile}" saved!`, "success");
+    closeFileEditor();
+    
+    if (confirm(`Download "${currentEditingFile}"?`)) {
+        const blob = new Blob([newContent], { type: fileData.type || 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = currentEditingFile;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+}
+
+// ==================== VOICE INPUT ====================
+let recognition = null;
+let isListening = false;
+
+function initSpeechRecognition() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      console.warn('Speech recognition not supported');
-      return false;
+        return false;
     }
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
@@ -571,340 +882,158 @@
     recognition.lang = 'id-ID';
     
     recognition.onstart = () => {
-      isListening = true;
-      const voiceBtn = document.getElementById('voiceBtn');
-      voiceBtn.classList.add('listening');
-      voiceBtn.innerHTML = '<i class="fas fa-microphone-slash text-white text-sm"></i>';
-      showOutputMessage('🎤 Listening... Speak now', 'warning');
+        isListening = true;
+        const voiceBtn = document.getElementById('voiceBtn');
+        voiceBtn.classList.add('listening');
+        voiceBtn.innerHTML = '<i class="fas fa-microphone-slash text-white text-sm"></i>';
+        showOutputMessage('🎤 Listening... Speak now', 'warning');
     };
     
     recognition.onend = () => {
-      isListening = false;
-      const voiceBtn = document.getElementById('voiceBtn');
-      voiceBtn.classList.remove('listening');
-      voiceBtn.innerHTML = '<i class="fas fa-microphone text-neon-pink text-sm"></i>';
+        isListening = false;
+        const voiceBtn = document.getElementById('voiceBtn');
+        voiceBtn.classList.remove('listening');
+        voiceBtn.innerHTML = '<i class="fas fa-microphone text-neon-pink text-sm"></i>';
     };
     
     recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      const userInput = document.getElementById('userInput');
-      userInput.value = text;
-      showOutputMessage(`🎤 Recognized: "${text}"`, 'success');
-      // Auto send after voice input
-      setTimeout(() => sendMessage(), 100);
+        const text = event.results[0][0].transcript;
+        document.getElementById('userInput').value = text;
+        showOutputMessage(`🎤 Recognized: "${text}"`, 'success');
+        setTimeout(() => sendMessage(), 100);
     };
     
     recognition.onerror = (event) => {
-      console.error('Speech recognition error', event.error);
-      showOutputMessage(`🎤 Error: ${event.error}`, 'error');
-      isListening = false;
-      const voiceBtn = document.getElementById('voiceBtn');
-      voiceBtn.classList.remove('listening');
-      voiceBtn.innerHTML = '<i class="fas fa-microphone text-neon-pink text-sm"></i>';
+        showOutputMessage(`🎤 Error: ${event.error}`, 'error');
+        isListening = false;
+        const voiceBtn = document.getElementById('voiceBtn');
+        voiceBtn.classList.remove('listening');
+        voiceBtn.innerHTML = '<i class="fas fa-microphone text-neon-pink text-sm"></i>';
     };
     
     return true;
-  }
-  
-  function startVoiceInput() {
+}
+
+function startVoiceInput() {
     if (!recognition) {
-      if (!initSpeechRecognition()) {
-        showOutputMessage('Speech recognition not supported in this browser', 'error');
-        return;
-      }
+        if (!initSpeechRecognition()) {
+            showOutputMessage('Speech recognition not supported', 'error');
+            return;
+        }
     }
     if (isListening) {
-      recognition.stop();
+        recognition.stop();
     } else {
-      try {
-        recognition.start();
-      } catch(e) {
-        showOutputMessage('Please grant microphone permission', 'error');
-      }
+        try {
+            recognition.start();
+        } catch(e) {
+            showOutputMessage('Please grant microphone permission', 'error');
+        }
     }
-  }
-  
-  // ========== TEXT-TO-SPEECH ==========
-  let ttsEnabled = false;
-  let speechSynthesis = window.speechSynthesis;
-  
-  function speakText(text) {
+}
+
+// ==================== TEXT TO SPEECH ====================
+let ttsEnabled = false;
+let speechSynthesis = window.speechSynthesis;
+
+function speakText(text) {
     if (!ttsEnabled) return;
-    // Stop any ongoing speech
     speechSynthesis.cancel();
-    // Clean text from markdown/code
     let cleanText = text.replace(/[#*`~>]/g, '').replace(/\n/g, '. ').substring(0, 500);
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'id-ID';
     utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
     speechSynthesis.speak(utterance);
-  }
-  
-  function toggleTTS() {
+}
+
+function toggleTTS() {
     ttsEnabled = !ttsEnabled;
-    const ttsBtn = document.getElementById('ttsToggleBtn');
-    if (ttsEnabled) {
-      ttsBtn.classList.add('tts-active');
-      ttsBtn.innerHTML = '<i class="fas fa-volume-up mr-1"></i> TTS On';
-      showOutputMessage('🔊 Text-to-Speech enabled', 'success');
-    } else {
-      ttsBtn.classList.remove('tts-active');
-      ttsBtn.innerHTML = '<i class="fas fa-volume-up mr-1"></i> TTS Off';
-      speechSynthesis.cancel();
-      showOutputMessage('🔇 Text-to-Speech disabled', 'warning');
-    }
+    const btns = ['ttsToggleBtnDesktop', 'ttsToggleBtnMobile'];
+    btns.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            if (ttsEnabled) {
+                btn.classList.add('tts-active');
+                btn.innerHTML = '<i class="fas fa-volume-up mr-1"></i> TTS On';
+            } else {
+                btn.classList.remove('tts-active');
+                btn.innerHTML = '<i class="fas fa-volume-up mr-1"></i> TTS Off';
+            }
+        }
+    });
+    if (!ttsEnabled) speechSynthesis.cancel();
     localStorage.setItem('ttsEnabled', ttsEnabled);
-  }
-  
-  // ========== CODE PREVIEW ==========
-  let currentPreviewCode = '';
-  
-  function showPreview(code, language) {
-    const modal = document.getElementById('previewModal');
-    const iframe = document.getElementById('previewIframe');
-    
-    let previewContent = '';
-    if (language === 'html') {
-      previewContent = code;
-    } else if (language === 'javascript' || language === 'js') {
-      previewContent = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>Preview</title><style>body { font-family: monospace; padding: 20px; background: #f5f5f5; }</style></head>
-<body>
-  <div id="app"></div>
-  <script>
-    try {
-      ${code}
-    } catch(e) {
-      document.getElementById('app').innerHTML = '<div style="color: red;">Error: ' + e.message + '</div>';
-    }
-  <\/script>
-</body>
-</html>`;
-    } else if (language === 'css') {
-      previewContent = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><title>CSS Preview</title><style>${code}</style></head>
-<body>
-  <div class="container" style="padding: 20px;">
-    <h1>CSS Preview</h1>
-    <p>This is a preview of your CSS code.</p>
-    <button style="padding: 10px 20px;">Sample Button</button>
-  </div>
-</body>
-</html>`;
-    } else {
-      previewContent = `<div style="padding: 20px; font-family: monospace;">
-        <h2>Preview not available for ${language}</h2>
-        <p>Live preview is available for HTML, JavaScript, and CSS.</p>
-      </div>`;
-    }
-    
-    iframe.srcdoc = previewContent;
-    modal.classList.add('active');
-  }
-  
-  function closePreview() {
-    document.getElementById('previewModal').classList.remove('active');
-  }
-  
-  // ========== FAST TYPING ==========
-  async function typeMessageToElement(element, fullText) {
-    if (isTyping) return;
-    isTyping = true;
-    const parsedHtml = marked.parse(fullText);
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = parsedHtml;
-    element.innerHTML = tempDiv.innerHTML;
-    element.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
-    setTimeout(() => { addButtonsToCodeBlocks(); }, 10);
-    isTyping = false;
-    
-    // Text-to-Speech
-    if (ttsEnabled) {
-      speakText(fullText);
-    }
-  }
-  
-  // ========== COMMAND HANDLER ==========
-  async function handleCommand(cmd) {
-    if (cmd === '/help') {
-      return `📖 **KURO CLI Help Menu v2.0**
+}
 
-**Voice Features:**
-• 🎤 Click microphone to speak (Speech-to-Text)
-• 🔊 Toggle TTS button for voice output
-
-**Commands:**
-• \`/help\` - Show this help menu
-• \`/topic\` - Show current topic focus
-• \`/stats\` - Show session statistics
-• \`/clear\` - Clear current chat
-• \`/export\` - Export chat history
-• \`/preview\` - Preview last code
-
-**Keyboard Shortcuts:**
-• \`Ctrl/Cmd + Enter\` - Send message
-• \`Ctrl/Cmd + K\` - Clear chat
-
-**Features:**
-• 📁 Upload files (PDF, Excel, Images, DOCX)
-• ▶️ Run JavaScript, Python, HTML, CSS code
-• 👁️ Live preview for HTML/CSS/JS
-• 🔒 Topic Focus Mode
-• 🌓 Dark/Light theme
-• 📱 PWA - Install as app!`;
-    }
-    
-    if (cmd === '/topic') {
-      if (currentTopicFocus) {
-        return `🎯 **Current Topic Focus:** \`${currentTopicFocus}\`
-
-This session is locked to this topic. Ask me anything about ${currentTopicFocus}!
-
-💡 To start a different topic, click the **"new"** button.`;
-      }
-      return `🎯 **No Topic Focus Active Yet**
-
-Start a conversation about a specific topic and I will focus on it.`;
-    }
-    
-    if (cmd === '/stats') {
-      const messages = await getMessagesByTopic(currentChatId);
-      const userMsgs = messages.filter(m => m.role === 'user').length;
-      const assistantMsgs = messages.filter(m => m.role === 'assistant').length;
-      return `📊 **Session Statistics**
-
-• 💬 Total messages: ${messages.length}
-• 👤 User: ${userMsgs} | 🤖 Assistant: ${assistantMsgs}
-• 📁 Files: ${uploadedFiles.length}
-• ▶️ Code executed: ${codeRunCount}
-• 🎯 Topic: ${currentTopicFocus || 'None'}
-• 🎤 Voice: Supported | 🔊 TTS: ${ttsEnabled ? 'On' : 'Off'}
-
-💡 Type /help for commands`;
-    }
-    
-    if (cmd === '/clear') {
-      document.getElementById('messagesContainer').innerHTML = '';
-      await addMessageWithTyping('assistant', '✓ Chat cleared!');
-      return null;
-    }
-    
-    if (cmd === '/export') {
-      const messages = await getMessagesByTopic(currentChatId);
-      let exportText = `KURO CLI Export\n${new Date().toLocaleString()}\nTopic: ${currentTopicFocus || 'General'}\n\n`;
-      for (const msg of messages.sort((a,b) => a.timestamp - b.timestamp)) {
-        exportText += `[${msg.time}] ${msg.role.toUpperCase()}:\n${msg.content}\n\n---\n\n`;
-      }
-      const blob = new Blob([exportText], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `kuro-chat-${Date.now()}.md`;
-      a.click();
-      URL.revokeObjectURL(url);
-      return `📥 Chat exported!`;
-    }
-    
-    if (cmd === '/preview' && currentPreviewCode) {
-      showPreview(currentPreviewCode.code, currentPreviewCode.language);
-      return null;
-    }
-    
-    return null;
-  }
-  
-  // ========== THEME ==========
-  function toggleTheme() {
+// ==================== THEME ====================
+function toggleTheme() {
     const body = document.body;
-    const themeBtn = document.getElementById('themeToggleBtn');
+    const btns = ['themeToggleBtnDesktop', 'themeToggleBtnMobile'];
     if (isDarkMode) {
-      body.classList.add('light-mode');
-      themeBtn.innerHTML = '<i class="fas fa-sun mr-1"></i> Light';
-      isDarkMode = false;
-      localStorage.setItem('theme', 'light');
+        body.classList.add('light-mode');
+        btns.forEach(id => { const btn = document.getElementById(id); if(btn) btn.innerHTML = '<i class="fas fa-sun mr-1"></i> Light'; });
+        isDarkMode = false;
+        localStorage.setItem('theme', 'light');
     } else {
-      body.classList.remove('light-mode');
-      themeBtn.innerHTML = '<i class="fas fa-moon mr-1"></i> Dark';
-      isDarkMode = true;
-      localStorage.setItem('theme', 'dark');
+        body.classList.remove('light-mode');
+        btns.forEach(id => { const btn = document.getElementById(id); if(btn) btn.innerHTML = '<i class="fas fa-moon mr-1"></i> Dark'; });
+        isDarkMode = true;
+        localStorage.setItem('theme', 'dark');
     }
-  }
-  
-  function loadThemePreference() {
+}
+
+function loadThemePreference() {
     const savedTheme = localStorage.getItem('theme');
-    const themeBtn = document.getElementById('themeToggleBtn');
     if (savedTheme === 'light') {
-      document.body.classList.add('light-mode');
-      themeBtn.innerHTML = '<i class="fas fa-sun mr-1"></i> Light';
-      isDarkMode = false;
+        document.body.classList.add('light-mode');
+        isDarkMode = false;
+        const btns = ['themeToggleBtnDesktop', 'themeToggleBtnMobile'];
+        btns.forEach(id => { const btn = document.getElementById(id); if(btn) btn.innerHTML = '<i class="fas fa-sun mr-1"></i> Light'; });
     }
     const savedTTS = localStorage.getItem('ttsEnabled');
-    if (savedTTS === 'true') {
-      toggleTTS();
-    }
-  }
-  
-  // ========== SIDEBAR FUNCTIONS ==========
-  function hideSidebar() {
+    if (savedTTS === 'true') toggleTTS();
+}
+
+// ==================== SIDEBAR ====================
+function hideSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (window.innerWidth <= 768) { closeMobileSidebar(); isSidebarHidden = true; }
     else { sidebar.classList.add('hidden-sidebar'); isSidebarHidden = true; }
     localStorage.setItem('sidebarHidden', 'true');
-  }
-  
-  function showSidebar() {
+}
+
+function showSidebar() {
     const sidebar = document.getElementById('sidebar');
     if (window.innerWidth <= 768) { openMobileSidebar(); isSidebarHidden = false; }
     else { sidebar.classList.remove('hidden-sidebar'); isSidebarHidden = false; }
     localStorage.setItem('sidebarHidden', 'false');
-  }
-  
-  function toggleSidebarHideShow() { if (isSidebarHidden) showSidebar(); else hideSidebar(); }
-  
-  function loadSidebarState() {
+}
+
+function toggleSidebarHideShow() { if (isSidebarHidden) showSidebar(); else hideSidebar(); }
+
+function loadSidebarState() {
     const saved = localStorage.getItem('sidebarHidden');
     const isMobile = window.innerWidth <= 768;
     if (saved === 'true') {
-      if (!isMobile) { document.getElementById('sidebar').classList.add('hidden-sidebar'); isSidebarHidden = true; }
-      else { closeMobileSidebar(); isSidebarHidden = true; }
+        if (!isMobile) { document.getElementById('sidebar').classList.add('hidden-sidebar'); isSidebarHidden = true; }
+        else { closeMobileSidebar(); isSidebarHidden = true; }
     } else { if (!isMobile) { document.getElementById('sidebar').classList.remove('hidden-sidebar'); isSidebarHidden = false; } }
-  }
-  
-  function openMobileSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.add('mobile-open');
-    overlay.classList.add('active');
+}
+
+function openMobileSidebar() {
+    document.getElementById('sidebar').classList.add('mobile-open');
+    document.getElementById('sidebarOverlay').classList.add('active');
     document.body.style.overflow = 'hidden';
-    isSidebarHidden = false;
-    localStorage.setItem('sidebarHidden', 'false');
-  }
-  
-  function closeMobileSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.remove('mobile-open');
-    overlay.classList.remove('active');
+}
+
+function closeMobileSidebar() {
+    document.getElementById('sidebar').classList.remove('mobile-open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
     document.body.style.overflow = '';
-    isSidebarHidden = true;
-    localStorage.setItem('sidebarHidden', 'true');
-  }
-  
-  function stopChatGeneration() {
-    if (currentAbortController) { currentAbortController.abort(); currentAbortController = null; }
-    isGenerating = false; isTyping = false;
-    document.getElementById('stopChatBtn').style.display = 'none';
-    endThinkingProcess();
-    addMessageWithTyping('assistant', '⚠️ **Chat generation stopped.**');
-    document.getElementById('sendBtn').disabled = false;
-    document.getElementById('sendBtn').style.opacity = '1';
-  }
-  
-  function showOutputMessage(message, type = "info") {
+}
+
+// ==================== UTILITIES ====================
+function showOutputMessage(message, type = "info") {
     const outputContent = document.getElementById('outputContent');
     const outputArea = document.getElementById('outputArea');
     outputArea.classList.add('open');
@@ -913,18 +1042,86 @@ Start a conversation about a specific topic and I will focus on it.`;
     messageDiv.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>${message}`;
     outputContent.appendChild(messageDiv);
     outputContent.scrollTop = outputContent.scrollHeight;
-  }
-  
-  async function initPyodide() {
-    if (!pyodide) {
-      showOutputMessage("Loading Python environment...", "warning");
-      pyodide = await loadPyodide();
-      showOutputMessage("✓ Python environment ready", "success");
+}
+
+function escapeHtml(str) { return str?.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) || ''; }
+
+function updateFileCount() {
+    const count = storedFiles.size;
+    ['fileCountDesktop', 'fileCountMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = `${count}`;
+    });
+}
+
+function startThinkingProcess() {
+    const container = document.getElementById('thinkingProcess');
+    const step1 = document.getElementById('step1'), step2 = document.getElementById('step2'), step3 = document.getElementById('step3');
+    container.classList.remove('hidden');
+    step1.classList.remove('hidden', 'completed');
+    step2.classList.add('hidden');
+    step3.classList.add('hidden');
+    step1.querySelector('i').className = 'fas fa-circle-notch fa-spin';
+    setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step2.classList.remove('hidden'); step2.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400);
+    setTimeout(() => { if(isGenerating) { step2.querySelector('i').className = 'fas fa-check-circle'; step2.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800);
+}
+
+function endThinkingProcess() { document.getElementById('thinkingProcess').classList.add('hidden'); }
+
+function stopChatGeneration() {
+    if (currentAbortController) { currentAbortController.abort(); currentAbortController = null; }
+    isGenerating = false;
+    isTyping = false;
+    ['stopChatBtnDesktop', 'stopChatBtnMobile'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = 'none';
+    });
+    endThinkingProcess();
+    addMessageWithTyping('assistant', '⚠️ **Chat generation stopped.**');
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('sendBtn').style.opacity = '1';
+}
+
+function updateStopButtons(show) {
+    ['stopChatBtnDesktop', 'stopChatBtnMobile'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.style.display = show ? 'flex' : 'none';
+    });
+}
+
+function syncModelSelect(value) {
+    currentModel = value;
+    ['modelSelectDesktop', 'modelSelectMobile'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (sel && sel.value !== value) sel.value = value;
+    });
+}
+
+// ==================== CODE EXECUTION ====================
+function showPreview(code, language) {
+    const modal = document.getElementById('previewModal');
+    const iframe = document.getElementById('previewIframe');
+    let previewContent = '';
+    
+    if (language === 'html') {
+        previewContent = code;
+    } else if (language === 'javascript' || language === 'js') {
+        previewContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Preview</title><style>body{font-family:monospace;padding:20px;background:#f5f5f5;}</style></head><body><div id="app"></div><script>try{${code}}catch(e){document.getElementById('app').innerHTML='<div style="color:red;">Error: '+e.message+'</div>';}<\/script></body></html>`;
+    } else if (language === 'css') {
+        previewContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>CSS Preview</title><style>${code}</style></head><body><div style="padding:20px;"><h1>CSS Preview</h1><p>Preview of your CSS code.</p><button style="padding:10px 20px;">Sample Button</button></div></body></html>`;
+    } else {
+        previewContent = `<div style="padding:20px;"><h2>Preview not available for ${language}</h2><p>Live preview available for HTML, JavaScript, and CSS.</p></div>`;
     }
-    return pyodide;
-  }
-  
-  async function runCode(code, language) {
+    
+    iframe.srcdoc = previewContent;
+    modal.classList.add('active');
+}
+
+function closePreview() {
+    document.getElementById('previewModal').classList.remove('active');
+}
+
+async function runCode(code, language) {
     codeRunCount++;
     const outputContent = document.getElementById('outputContent');
     const outputArea = document.getElementById('outputArea');
@@ -934,692 +1131,742 @@ Start a conversation about a specific topic and I will focus on it.`;
     executionDiv.innerHTML = `<div class="text-yellow-400 mb-2"><i class="fas fa-spinner fa-spin"></i> Running ${language} code...</div>`;
     outputContent.appendChild(executionDiv);
     outputContent.scrollTop = outputContent.scrollHeight;
+    
     try {
-      let result = ''; let executionTime = Date.now();
-      if (language === 'javascript' || language === 'js') {
-        let logs = [];
-        const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
-        console.log = (...args) => logs.push(args.map(arg => { try { if (typeof arg === 'object') return JSON.stringify(arg, null, 2); return String(arg); } catch { return String(arg); } }).join(' '));
-        console.error = (...args) => logs.push(`[ERROR] ${args.join(' ')}`);
-        console.warn = (...args) => logs.push(`[WARN] ${args.join(' ')}`);
-        try { const asyncFunc = new Function('return (async () => { try { ' + code + ' } catch(e) { console.error(e.message); } })()'); await asyncFunc(); result = logs.join('\n'); if (!result) result = '✓ Code executed successfully'; } catch (err) { result = `Error: ${err.message}`; }
-        console.log = originalLog; console.error = originalError; console.warn = originalWarn;
-        executionTime = Date.now() - executionTime;
-        executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> JavaScript completed in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>`;
-      } else if (language === 'python' || language === 'py') {
-        await initPyodide();
-        try {
-          pyodide.runPython(`import sys\nfrom io import StringIO\nsys.stdout = StringIO()\nsys.stderr = StringIO()`);
-          await pyodide.runPythonAsync(code);
-          const output = pyodide.runPython('sys.stdout.getvalue()');
-          const error = pyodide.runPython('sys.stderr.getvalue()');
-          result = output || (error || '✓ Code executed successfully');
-          if (error) result = `Output:\n${output}\n\nError:\n${error}`;
-          executionTime = Date.now() - executionTime;
-          executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> Python completed in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>`;
-        } catch (err) { executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Python Error: ${escapeHtml(err.message)}</div>`; }
-      } else if (language === 'html') {
-        executionTime = Date.now() - executionTime;
-        executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> HTML ready in ${executionTime}ms</div><div class="mt-2"><button class="preview-code-btn" onclick="showPreview(${JSON.stringify(code)}, 'html')"><i class="fas fa-eye"></i> Live Preview</button></div>`;
-      } else if (language === 'css') {
-        const styleId = 'dynamic-css-' + Date.now(); let style = document.getElementById(styleId); if (!style) { style = document.createElement('style'); style.id = styleId; document.head.appendChild(style); } style.textContent = code;
-        executionTime = Date.now() - executionTime;
-        executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> CSS applied in ${executionTime}ms</div><div class="mt-2"><button class="preview-code-btn" onclick="showPreview(${JSON.stringify(code)}, 'css')"><i class="fas fa-eye"></i> Live Preview</button></div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>`;
-      } else { executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Language "${language}" not supported.</div>`; }
-    } catch (err) { executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Execution Error: ${escapeHtml(err.message)}</div>`; }
+        let result = '';
+        let executionTime = Date.now();
+        
+        if (language === 'python' || language === 'py') {
+            const pythonResult = await runPythonCode(code);
+            executionTime = Date.now() - executionTime;
+            if (pythonResult.success) {
+                executionDiv.innerHTML = `<div class="output-success"><i class="fab fa-python mr-2"></i> Python completed in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(pythonResult.output)}</pre>`;
+            } else {
+                executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Python Error: ${escapeHtml(pythonResult.output)}</div>`;
+            }
+        } else if (language === 'javascript' || language === 'js') {
+            let logs = [];
+            const originalLog = console.log, originalError = console.error, originalWarn = console.warn;
+            console.log = (...args) => logs.push(args.map(arg => { try { if (typeof arg === 'object') return JSON.stringify(arg, null, 2); return String(arg); } catch { return String(arg); } }).join(' '));
+            console.error = (...args) => logs.push(`[ERROR] ${args.join(' ')}`);
+            console.warn = (...args) => logs.push(`[WARN] ${args.join(' ')}`);
+            try { const asyncFunc = new Function('return (async () => { try { ' + code + ' } catch(e) { console.error(e.message); } })()'); await asyncFunc(); result = logs.join('\n'); if (!result) result = '✓ Code executed successfully'; } catch (err) { result = `Error: ${err.message}`; }
+            console.log = originalLog; console.error = originalError; console.warn = originalWarn;
+            executionTime = Date.now() - executionTime;
+            executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> JavaScript completed in ${executionTime}ms</div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(result)}</pre>`;
+        } else if (language === 'html') {
+            executionTime = Date.now() - executionTime;
+            executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> HTML ready in ${executionTime}ms</div><div class="mt-2"><button class="preview-code-btn" onclick='showPreview(${JSON.stringify(code)}, "html")'><i class="fas fa-eye"></i> Live Preview</button></div>`;
+        } else if (language === 'css') {
+            const styleId = 'dynamic-css-' + Date.now();
+            let style = document.getElementById(styleId);
+            if (!style) { style = document.createElement('style'); style.id = styleId; document.head.appendChild(style); }
+            style.textContent = code;
+            executionTime = Date.now() - executionTime;
+            executionDiv.innerHTML = `<div class="output-success"><i class="fas fa-check-circle mr-2"></i> CSS applied in ${executionTime}ms</div><div class="mt-2"><button class="preview-code-btn" onclick='showPreview(${JSON.stringify(code)}, "css")'><i class="fas fa-eye"></i> Live Preview</button></div><pre class="text-gray-300 whitespace-pre-wrap mt-2 bg-black/30 p-3 rounded" style="font-family: monospace; font-size: 12px;">${escapeHtml(code.substring(0, 500))}${code.length > 500 ? '...' : ''}</pre>`;
+        } else {
+            executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Language "${language}" not supported.</div>`;
+        }
+    } catch (err) {
+        executionDiv.innerHTML = `<div class="output-error"><i class="fas fa-exclamation-triangle mr-2"></i> Execution Error: ${escapeHtml(err.message)}</div>`;
+    }
     outputContent.scrollTop = outputContent.scrollHeight;
-  }
-  
-  function addButtonsToCodeBlocks() {
+}
+
+function addButtonsToCodeBlocks() {
     document.querySelectorAll('#messagesContainer pre').forEach(pre => {
-      if (pre.parentElement.classList.contains('code-block-wrapper')) return;
-      const code = pre.querySelector('code'); if (!code) return;
-      const wrapper = document.createElement('div'); wrapper.className = 'code-block-wrapper';
-      let language = 'javascript'; const classMatch = code.className.match(/language-(\w+)/); if (classMatch) language = classMatch[1];
-      const buttonsBar = document.createElement('div'); buttonsBar.className = 'code-buttons-bar';
-      const copyBtn = document.createElement('button'); copyBtn.className = 'copy-code-btn'; copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-      copyBtn.onclick = async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(code.textContent); copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000); };
-      const runBtn = document.createElement('button'); runBtn.className = 'run-code-btn'; runBtn.innerHTML = '<i class="fas fa-play"></i> Run';
-      runBtn.onclick = (e) => { e.stopPropagation(); runCode(code.textContent, language); };
-      const previewBtn = document.createElement('button'); previewBtn.className = 'preview-code-btn'; previewBtn.innerHTML = '<i class="fas fa-eye"></i> Preview';
-      previewBtn.onclick = (e) => { 
-        e.stopPropagation(); 
-        currentPreviewCode = { code: code.textContent, language: language };
-        showPreview(code.textContent, language);
-      };
-      buttonsBar.appendChild(copyBtn);
-      buttonsBar.appendChild(runBtn);
-      if (language === 'html' || language === 'css' || language === 'javascript' || language === 'js') {
-        buttonsBar.appendChild(previewBtn);
-      }
-      pre.parentNode.insertBefore(wrapper, pre); wrapper.appendChild(pre); wrapper.appendChild(buttonsBar);
+        if (pre.parentElement.classList.contains('code-block-wrapper')) return;
+        const code = pre.querySelector('code'); if (!code) return;
+        const wrapper = document.createElement('div'); wrapper.className = 'code-block-wrapper';
+        let language = 'javascript';
+        const classMatch = code.className.match(/language-(\w+)/);
+        if (classMatch) language = classMatch[1];
+        const buttonsBar = document.createElement('div'); buttonsBar.className = 'code-buttons-bar';
+        
+        const copyBtn = document.createElement('button'); copyBtn.className = 'copy-code-btn'; copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+        copyBtn.onclick = async (e) => { e.stopPropagation(); await navigator.clipboard.writeText(code.textContent); copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(() => { copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 2000); };
+        
+        const runBtn = document.createElement('button'); runBtn.className = 'run-code-btn'; runBtn.innerHTML = '<i class="fas fa-play"></i> Run';
+        runBtn.onclick = (e) => { e.stopPropagation(); runCode(code.textContent, language); };
+        
+        const previewBtn = document.createElement('button'); previewBtn.className = 'preview-code-btn'; previewBtn.innerHTML = '<i class="fas fa-eye"></i> Preview';
+        previewBtn.onclick = (e) => { e.stopPropagation(); showPreview(code.textContent, language); };
+        
+        const editBtn = document.createElement('button'); editBtn.className = 'edit-file-btn'; editBtn.innerHTML = '<i class="fas fa-edit"></i> Edit';
+        editBtn.onclick = (e) => {
+            e.stopPropagation();
+            const tempFilename = `code_${Date.now()}.${language}`;
+            storedFiles.set(tempFilename, { content: code.textContent, type: 'text/plain', size: code.textContent.length, edited: false });
+            openFileEditor(tempFilename);
+        };
+        
+        buttonsBar.appendChild(copyBtn);
+        buttonsBar.appendChild(runBtn);
+        if (language === 'html' || language === 'css' || language === 'javascript' || language === 'js') {
+            buttonsBar.appendChild(previewBtn);
+        }
+        buttonsBar.appendChild(editBtn);
+        
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+        wrapper.appendChild(buttonsBar);
     });
-  }
-  
-  function startThinkingProcess(hasFile = false) { 
-    const container = document.getElementById('thinkingProcess'); 
-    const step1 = document.getElementById('step1'), step2 = document.getElementById('step2'), step3 = document.getElementById('step3'); 
-    container.classList.remove('hidden'); 
-    step1.classList.remove('hidden', 'completed'); 
-    step2.classList.add('hidden'); 
-    step3.classList.add('hidden'); 
-    step1.querySelector('i').className = 'fas fa-circle-notch fa-spin'; 
-    setTimeout(() => { if(isGenerating) { step1.querySelector('i').className = 'fas fa-check-circle'; step1.classList.add('completed'); step2.classList.remove('hidden'); step2.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 400); 
-    setTimeout(() => { if(isGenerating) { step2.querySelector('i').className = 'fas fa-check-circle'; step2.classList.add('completed'); step3.classList.remove('hidden'); step3.querySelector('i').className = 'fas fa-circle-notch fa-spin'; } }, 800); 
-  }
-  
-  function endThinkingProcess() { document.getElementById('thinkingProcess').classList.add('hidden'); }
-  
-  function updateTopicBadge() {
-    const badge = document.getElementById('topicBadge');
-    const topicNameSpan = document.getElementById('topicName');
-    if (currentTopicFocus) {
-      topicNameSpan.textContent = currentTopicFocus;
-      badge.classList.remove('hidden');
-    } else { badge.classList.add('hidden'); }
-  }
-  
-  function getTopicFocusInstruction() {
-    if (!currentTopicFocus) {
-      return "You are KURO CLI, a terminal-style AI assistant. Respond in Indonesian with markdown format. Use code blocks with language identifiers. Be helpful and concise.";
-    }
-    return `⚠️ TOPIC FOCUS MODE ACTIVE: ${currentTopicFocus} ⚠️
+}
 
-You are KURO CLI. This session is FOCUSED on: "${currentTopicFocus}".
+async function typeMessageToElement(element, fullText) {
+    if (isTyping) return;
+    isTyping = true;
+    const parsedHtml = marked.parse(fullText);
+    element.innerHTML = parsedHtml;
+    element.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
+    setTimeout(() => { addButtonsToCodeBlocks(); }, 10);
+    isTyping = false;
+    if (ttsEnabled) speakText(fullText);
+}
 
-RULES:
-1. ONLY answer questions related to "${currentTopicFocus}"
-2. If user asks something unrelated, remind them about the current topic focus and suggest creating a new session
-3. Keep all code examples and discussions relevant to "${currentTopicFocus}"
-
-Respond in Indonesian with markdown format. Use code blocks with language identifiers.`;
-  }
-  
-  function isQuestionRelevant(question) {
-    if (!currentTopicFocus) return true;
-    const topicKeywords = {
-      'Calculator': ['kalkulator', 'calculator', 'hitung', 'aritmatika', 'tambah', 'kurang', 'kali', 'bagi'],
-      'To-Do List': ['todo', 'to-do', 'tugas', 'list', 'task', 'daftar'],
-      'Weather App': ['cuaca', 'weather', 'suhu', 'temperature'],
-      'Game Development': ['game', 'permainan', 'snake', 'tetris', 'pong'],
-      'Web Scraper': ['scrape', 'crawl', 'extract', 'web scraping'],
-      'Data Visualization': ['chart', 'grafik', 'visualisasi', 'plot'],
-      'API Integration': ['api', 'fetch', 'request', 'endpoint']
-    };
-    const keywords = topicKeywords[currentTopicFocus] || [];
-    if (keywords.length === 0) return true;
-    const questionLower = question.toLowerCase();
-    for (const keyword of keywords) { if (questionLower.includes(keyword)) return true; }
-    return false;
-  }
-  
-  function getConversationContext(messages, limit = 4) {
-    if (!messages || messages.length === 0) return '';
-    const recentMessages = messages.slice(-Math.min(limit, messages.length));
-    let context = '';
-    for (const msg of recentMessages) {
-      const role = msg.role === 'user' ? 'User' : 'Assistant';
-      const content = msg.content.length > 500 ? msg.content.substring(0, 500) + '...' : msg.content;
-      context += `${role}: ${content}\n\n`;
-    }
-    return context;
-  }
-  
-  async function sendToAI(message, fileContext = null, conversationHistory = null) {
-    startThinkingProcess(!!fileContext);
-    const isRelevant = isQuestionRelevant(message);
-    if (!isRelevant && currentTopicFocus) {
-      endThinkingProcess();
-      return `⚠️ **Topic Focus: ${currentTopicFocus}** ⚠️
-
-Maaf, session ini fokus membahas **${currentTopicFocus}**. 
-
-💡 Klik tombol **"new"** untuk membuat session baru.`;
+async function addMessageWithTyping(role, content) {
+    const container = document.getElementById('messagesContainer');
+    const div = document.createElement('div');
+    const time = new Date().toLocaleTimeString();
+    
+    if (role === 'user') {
+        div.className = `flex justify-end mb-3`;
+        div.innerHTML = `<div class="max-w-[85%]"><div class="bg-gradient-to-r from-neon-purple/10 to-neon-pink/10 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-purple mb-1"><i class="fas fa-user-astronaut"></i> <span>kuro@user:~$</span></div><div class="text-gray-200 text-sm whitespace-pre-wrap break-words">${escapeHtml(content)}</div></div><div class="text-[10px] text-gray-600 mt-1 text-right">${time}</div></div>`;
+        container.appendChild(div);
+    } else {
+        div.className = `flex justify-start mb-3`;
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'max-w-[85%]';
+        bubbleDiv.innerHTML = `<div class="bg-black/50 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-cyan mb-1"><i class="fas fa-terminal"></i> <span>kuro@cli:~$</span></div><div class="message-typing-container message-content"></div></div><div class="text-[10px] text-gray-600 mt-1">${time}</div>`;
+        div.appendChild(bubbleDiv);
+        container.appendChild(div);
+        await typeMessageToElement(bubbleDiv.querySelector('.message-typing-container'), content);
     }
     
+    container.scrollTop = container.scrollHeight;
+    const welcome = container.querySelector('.flex-col.items-center');
+    if (welcome && container.children.length > 2) welcome.remove();
+    return div;
+}
+
+// ==================== FILE UPLOAD ====================
+async function extractFileContent(file, onProgress) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    let text = `[FILE: ${file.name}]\n`;
+    if (onProgress) onProgress(10);
+    
+    if (ext === 'py' || ext === 'js' || ext === 'html' || ext === 'css' || ext === 'json' || ext === 'md' || ext === 'txt') {
+        const content = await file.text();
+        storedFiles.set(file.name, { content: content, type: file.type, size: file.size, lastModified: file.lastModified, edited: false });
+        text += content.substring(0, 6000);
+        if (onProgress) onProgress(100);
+        return { name: file.name, extractedText: text };
+    }
+    
+    if (ext === 'pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(item => item.str).join(' ') + '\n';
+            if (onProgress) onProgress(30 + Math.floor((i / 10) * 60));
+        }
+        storedFiles.set(file.name, { content: text, type: file.type, size: file.size, lastModified: file.lastModified, edited: false });
+    } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer);
+        workbook.SheetNames.forEach(sheet => {
+            const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 });
+            text += `\n[Sheet: ${sheet}]\nPreview:\n${JSON.stringify(data.slice(0, 10), null, 2)}\n`;
+        });
+        storedFiles.set(file.name, { content: text, type: file.type, size: file.size, lastModified: file.lastModified, edited: false });
+        if (onProgress) onProgress(80);
+    } else if (ext === 'docx') {
+        const arrayBuffer = await file.arrayBuffer();
+        const extractedText = await extractDocxText(arrayBuffer);
+        text += extractedText;
+        storedFiles.set(file.name, { content: text, type: file.type, size: file.size, lastModified: file.lastModified, edited: false });
+        if (onProgress) onProgress(80);
+    } else if (['png', 'jpg', 'jpeg'].includes(ext)) {
+        const url = URL.createObjectURL(file);
+        const { data: { text: ocrText } } = await Tesseract.recognize(url, 'ind+eng');
+        URL.revokeObjectURL(url);
+        text += ocrText;
+        storedFiles.set(file.name, { content: text, type: file.type, size: file.size, lastModified: file.lastModified, edited: false });
+        if (onProgress) onProgress(80);
+    } else {
+        const content = await file.text();
+        text += content;
+        storedFiles.set(file.name, { content: content, type: file.type, size: file.size, lastModified: file.lastModified, edited: false });
+        if (onProgress) onProgress(80);
+    }
+    
+    if (onProgress) onProgress(100);
+    return { name: file.name, extractedText: text.substring(0, 6000) };
+}
+
+async function handleMultiFileUpload(files) {
+    const previewContainer = document.getElementById('multiFilePreview');
+    const previewList = document.getElementById('filePreviewList');
+    previewContainer.classList.remove('hidden');
+    
+    for (const file of files) {
+        const fileId = Date.now() + '_' + Math.random();
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'file-card flex items-center gap-2 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1.5 min-w-[130px]';
+        progressDiv.innerHTML = `<i class="fas fa-file text-neon-purple text-xs"></i><div class="flex-1"><p class="text-xs truncate">${file.name}</p><div class="w-full bg-gray-800 rounded-full h-1"><div class="progress-bar bg-gradient-to-r from-neon-purple to-neon-pink h-1 rounded-full" style="width:0%"></div></div></div>`;
+        previewList.appendChild(progressDiv);
+        
+        try {
+            await extractFileContent(file, (p) => {
+                const bar = progressDiv.querySelector('.progress-bar');
+                if (bar) bar.style.width = p + '%';
+            });
+            
+            progressDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 text-xs"></i><div class="flex-1"><p class="text-xs truncate text-green-400">${file.name}</p></div><button class="edit-file-mini text-gray-500 hover:text-neon-orange text-xs mr-1" data-name="${file.name}" style="background:none; border:none;"><i class="fas fa-edit"></i></button><button class="remove-file text-gray-500 hover:text-red-500 text-xs" data-id="${fileId}"><i class="fas fa-times"></i></button>`;
+            
+            const editBtn = progressDiv.querySelector('.edit-file-mini');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openFileEditor(file.name);
+                });
+            }
+            
+            progressDiv.querySelector('.remove-file')?.addEventListener('click', () => {
+                storedFiles.delete(file.name);
+                progressDiv.remove();
+                if (storedFiles.size === 0) previewContainer.classList.add('hidden');
+                updateFileCount();
+            });
+        } catch (err) {
+            progressDiv.innerHTML = `<div class="text-red-500 text-xs">✖ ${file.name}</div>`;
+        }
+    }
+    updateFileCount();
+}
+
+// ==================== COMMAND HANDLER ====================
+async function handleCommand(cmd) {
+    if (cmd === '/help') {
+        return `📖 **KURO CLI Help Menu v2.0**
+
+**🎤 Voice Features:**
+• Click microphone to speak
+• Toggle TTS for voice output
+
+**🐍 Python Features:**
+• Run Python code in browser
+• Use \`\`\`python code blocks
+• Type \`/run [filename.py]\` to run Python files
+
+**✏️ File Editor Features:**
+• "edit [filename] dan [instruction]"
+• Example: "edit makalah.docx dan tambahkan footnote"
+• Type \`/edit [filename]\` to open editor
+• Type \`/files\` to list all files
+
+**Commands:**
+• \`/help\` - This menu
+• \`/files\` - List uploaded files
+• \`/edit [filename]\` - Open file editor
+• \`/run [filename.py]\` - Run Python file
+• \`/stats\` - Session statistics
+• \`/clear\` - Clear chat
+• \`/export\` - Export chat
+
+**Keyboard:** Ctrl+Enter to send message`;
+    }
+    
+    if (cmd === '/files') {
+        if (storedFiles.size === 0) {
+            return "📁 **No files uploaded yet**\n\nClick the 📎 attach button to upload files.";
+        }
+        let fileList = "📁 **Uploaded Files:**\n\n";
+        for (const [name, data] of storedFiles) {
+            const size = data.size ? (data.size / 1024).toFixed(1) + " KB" : "?";
+            const edited = data.edited ? " ✏️" : "";
+            fileList += `• ${name} (${size})${edited}\n`;
+        }
+        fileList += "\n💡 Type `/edit [filename]` to edit a file";
+        return fileList;
+    }
+    
+    if (cmd.startsWith('/edit ')) {
+        const filename = cmd.substring(6).trim();
+        if (!filename) return "Usage: `/edit [filename]`";
+        if (!storedFiles.has(filename)) return `File "${filename}" not found. Upload it first.`;
+        openFileEditor(filename);
+        return null;
+    }
+    
+    if (cmd.startsWith('/run ')) {
+        const filename = cmd.substring(5).trim();
+        if (!filename) return "Usage: `/run [filename.py]`";
+        const fileData = storedFiles.get(filename);
+        if (!fileData) return `File "${filename}" not found.`;
+        if (!filename.endsWith('.py')) return `Only Python (.py) files can be run.`;
+        
+        showOutputMessage(`🐍 Running Python file: ${filename}`, "warning");
+        const result = await runPythonCode(fileData.content);
+        if (result.success) {
+            showOutputMessage(`✓ Python execution complete`, "success");
+            showOutputMessage(result.output, "info");
+            return `🐍 **Python Output:**\n\`\`\`\n${result.output.substring(0, 2000)}\n\`\`\``;
+        } else {
+            showOutputMessage(`❌ Python error`, "error");
+            return `🐍 **Python Error:**\n\`\`\`\n${result.output}\n\`\`\``;
+        }
+    }
+    
+    if (cmd === '/stats') {
+        return `📊 **Session Statistics**
+
+• 💬 Messages: ${document.querySelectorAll('#messagesContainer .flex').length}
+• 📁 Files: ${storedFiles.size}
+• ▶️ Code executed: ${codeRunCount}
+• 🐍 Python: ${pyodideReady ? 'Ready' : 'Loading...'}
+• 🔊 TTS: ${ttsEnabled ? 'On' : 'Off'}
+
+💡 Type /help for commands`;
+    }
+    
+    if (cmd === '/clear') {
+        document.getElementById('messagesContainer').innerHTML = '';
+        await addMessageWithTyping('assistant', '✓ Chat cleared!');
+        return null;
+    }
+    
+    if (cmd === '/export') {
+        const messages = document.querySelectorAll('#messagesContainer .flex');
+        let exportText = `KURO CLI Export\n${new Date().toLocaleString()}\n\n`;
+        exportText += `Files: ${storedFiles.size}\n\n`;
+        const blob = new Blob([exportText], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `kuro-chat-${Date.now()}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+        return `📥 Chat exported!`;
+    }
+    
+    return null;
+}
+
+// ==================== SEND TO AI ====================
+async function sendToAI(message, fileContext = null, conversationHistory = null) {
+    startThinkingProcess();
+    
+    // Check for file edit request
+    const editMatch = message.match(/edit\s+([^\s]+(?:\.[^\s]+)?)\s+dan\s+(.+)/i) || 
+                      message.match(/edit\s+([^\s]+(?:\.[^\s]+)?)\s+(.+)/i);
+    
+    if (editMatch && storedFiles.has(editMatch[1])) {
+        const filename = editMatch[1];
+        const instruction = editMatch[2];
+        endThinkingProcess();
+        showOutputMessage(`✏️ Editing file: ${filename}`, "warning");
+        
+        const result = await editTextFile(filename, instruction);
+        if (result.success) {
+            return `✅ **File Edited Successfully!**
+
+File: \`${filename}\`
+Instruction: ${instruction}
+
+**Preview of changes:**
+\`\`\`
+${result.newContent?.substring(0, 800)}${result.newContent?.length > 800 ? '...' : ''}
+\`\`\`
+
+Type \`/edit ${filename}\` to continue editing.`;
+        } else {
+            return `❌ **Edit Failed**
+
+${result.message}
+
+Please make sure the file has been uploaded first.`;
+        }
+    }
+    
+    // Check for Python code
+    const pythonMatch = message.match(/```python\n([\s\S]*?)```/i);
+    if (pythonMatch) {
+        const pythonCode = pythonMatch[1];
+        showOutputMessage("🐍 Executing Python code...", "warning");
+        const result = await runPythonCode(pythonCode);
+        if (result.success) {
+            return `🐍 **Python Output:**\n\`\`\`\n${result.output.substring(0, 3000)}\n\`\`\``;
+        } else {
+            return `🐍 **Python Error:**\n\`\`\`\n${result.output}\n\`\`\``;
+        }
+    }
+    
+    // Regular AI response
     let fullMessage = message;
     if (fileContext && fileContext.length > 0) {
-      fullMessage = `FILES:\n${fileContext.map(f => `[${f.name}]\n${f.extractedText.substring(0, 3000)}`).join('\n\n')}\n\nQUERY: ${message}`;
-    }
-    
-    let contextWithHistory = fullMessage;
-    if (conversationHistory && conversationHistory.length > 0) {
-      const context = getConversationContext(conversationHistory, 4);
-      contextWithHistory = `[CONVERSATION HISTORY]:\n${context}\n\n[USER QUERY]: ${fullMessage}`;
+        fullMessage = `FILES:\n${fileContext.map(f => `[${f.name}]\n${f.extractedText.substring(0, 3000)}`).join('\n\n')}\n\nQUERY: ${message}`;
     }
     
     const messages = [
-      { role: "system", content: getTopicFocusInstruction() },
-      { role: "user", content: contextWithHistory }
+        { role: "system", content: "You are KURO CLI, a terminal-style AI assistant. Respond in Indonesian with markdown format. Use code blocks with language identifiers. Help users with Python code and file editing." },
+        { role: "user", content: fullMessage }
     ];
     
     currentAbortController = new AbortController();
     try {
-      const response = await fetch(`${API_ENDPOINT}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
-        body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2000 }),
-        signal: currentAbortController.signal
-      });
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-      endThinkingProcess();
-      return data.choices[0].message.content;
-    } catch(err) {
-      endThinkingProcess();
-      if (err.name === 'AbortError') return null;
-      return `⚠️ Error: ${err.message}. Please try again.`;
-    } finally { currentAbortController = null; }
-  }
-  
-  // ========== INDEXEDDB ==========
-  let db = null; const DB_NAME = "KURO_CLI_DB_FINAL", CHATS_STORE = "chats", TOPICS_STORE = "topics";
-  
-  async function initDB() { 
-    return new Promise((resolve, reject) => { 
-      const request = indexedDB.open(DB_NAME, 3); 
-      request.onerror = () => reject(request.error); 
-      request.onsuccess = () => { db = request.result; resolve(db); }; 
-      request.onupgradeneeded = (event) => { 
-        const dbRef = event.target.result; 
-        if (!dbRef.objectStoreNames.contains(CHATS_STORE)) { 
-          const store = dbRef.createObjectStore(CHATS_STORE, { keyPath: "id", autoIncrement: true }); 
-          store.createIndex("topicId", "topicId", { unique: false }); 
-        } 
-        if (!dbRef.objectStoreNames.contains(TOPICS_STORE)) { 
-          dbRef.createObjectStore(TOPICS_STORE, { keyPath: "id", autoIncrement: true }); 
-        } 
-      }; 
-    }); 
-  }
-  
-  async function saveTopic(topic) { if (!db) await initDB(); return new Promise((resolve, reject) => { const tx = db.transaction([TOPICS_STORE], "readwrite"); const req = tx.objectStore(TOPICS_STORE).put(topic); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
-  async function getAllTopics() { if (!db) await initDB(); return new Promise((resolve) => { const tx = db.transaction([TOPICS_STORE], "readonly"); const req = tx.objectStore(TOPICS_STORE).getAll(); req.onsuccess = () => resolve(req.result || []); }); }
-  async function saveMessage(message) { if (!db) await initDB(); return new Promise((resolve, reject) => { const tx = db.transaction([CHATS_STORE], "readwrite"); const req = tx.objectStore(CHATS_STORE).put(message); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
-  async function getMessagesByTopic(topicId) { if (!db) await initDB(); return new Promise((resolve) => { const tx = db.transaction([CHATS_STORE], "readonly"); const index = tx.objectStore(CHATS_STORE).index("topicId"); const req = index.getAll(topicId); req.onsuccess = () => resolve(req.result || []); }); }
-  async function deleteTopic(topicId) { if (!db) await initDB(); return new Promise((resolve) => { const tx = db.transaction([TOPICS_STORE, CHATS_STORE], "readwrite"); tx.objectStore(TOPICS_STORE).delete(topicId); const messagesReq = tx.objectStore(CHATS_STORE).index("topicId").getAll(topicId); messagesReq.onsuccess = () => { messagesReq.result.forEach(msg => tx.objectStore(CHATS_STORE).delete(msg.id)); resolve(); }; }); }
-  async function updateTopicPin(topicId, pinned) { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); if (topic) { topic.pinned = pinned; await saveTopic(topic); await loadChatList(); } }
-  async function updateTopicName(topicId, newName) { const topics = await getAllTopics(); const topic = topics.find(t => t.id === topicId); if (topic) { topic.name = newName; await saveTopic(topic); await loadChatList(); if (currentChatId === topicId) updateTopicBadge(); } }
-  
-  async function clearCurrentChat() {
-    if (!currentChatId) return;
-    const messages = await getMessagesByTopic(currentChatId);
-    for (const msg of messages) {
-      const tx = db.transaction([CHATS_STORE], "readwrite");
-      tx.objectStore(CHATS_STORE).delete(msg.id);
+        const response = await fetch(`${API_ENDPOINT}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+            body: JSON.stringify({ model: currentModel, messages, stream: false, max_tokens: 2000 }),
+            signal: currentAbortController.signal
+        });
+        if (!response.ok) throw new Error(`API Error: ${response.status}`);
+        const data = await response.json();
+        endThinkingProcess();
+        return data.choices[0].message.content;
+    } catch (err) {
+        endThinkingProcess();
+        if (err.name === 'AbortError') return null;
+        return `⚠️ Error: ${err.message}. Please try again.`;
+    } finally {
+        currentAbortController = null;
     }
-    document.getElementById('messagesContainer').innerHTML = '';
-    await addMessageWithTyping('assistant', '✓ Chat cleared!');
-  }
-  
-  function showContextMenu(e, topicId, topicName) { 
-    let activeMenu = document.querySelector('.context-menu'); 
-    if (activeMenu) activeMenu.remove(); 
-    const menu = document.createElement('div'); 
-    menu.className = 'context-menu'; 
-    menu.style.left = Math.min(e.pageX, window.innerWidth - 180) + 'px'; 
-    menu.style.top = e.pageY + 'px'; 
-    menu.innerHTML = `<div class="context-menu-item" data-action="pin"><i class="fas fa-thumbtack text-neon-orange"></i> Pin / Unpin</div><div class="context-menu-item" data-action="rename"><i class="fas fa-edit text-neon-cyan"></i> Rename Session</div><div class="context-menu-item" data-action="delete" style="color:#f87171;"><i class="fas fa-trash"></i> Delete Session</div>`; 
-    document.body.appendChild(menu); 
-    const handleClick = async (action) => { 
-      if (action === 'pin') { 
-        const topics = await getAllTopics(); 
-        const topic = topics.find(t => t.id === topicId); 
-        await updateTopicPin(topicId, !topic?.pinned); 
-      } else if (action === 'rename') { 
-        const newName = prompt('Enter new session name:', topicName); 
-        if (newName?.trim()) await updateTopicName(topicId, newName.trim()); 
-      } else if (action === 'delete') { 
-        if (confirm('Delete this session?')) { 
-          await deleteTopic(topicId); 
-          if (currentChatId === topicId) { 
-            currentChatId = null; 
-            currentTopicFocus = null; 
-            document.getElementById('messagesContainer').innerHTML = ''; 
-            createNewChat(); 
-          } 
-          await loadChatList(); 
-        } 
-      } 
-      menu.remove(); 
-    }; 
-    menu.querySelectorAll('.context-menu-item').forEach(item => { item.addEventListener('click', () => handleClick(item.dataset.action)); }); 
-    setTimeout(() => { document.addEventListener('click', () => { if(menu.parentNode) menu.remove(); }, { once: true }); }, 10); 
-  }
-  
-  async function extractFileContent(file, onProgress) { 
-    const ext = file.name.split('.').pop().toLowerCase(); 
-    let text = `[FILE: ${file.name}]\n`; 
-    if (onProgress) onProgress(10); 
-    if (ext === 'pdf') { 
-      const arrayBuffer = await file.arrayBuffer(); 
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise; 
-      for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) { 
-        const page = await pdf.getPage(i); 
-        const content = await page.getTextContent(); 
-        text += content.items.map(item => item.str).join(' ') + '\n'; 
-        onProgress(30 + Math.floor((i / 10) * 60)); 
-      } 
-    } else if (['xlsx','xls','csv'].includes(ext)) { 
-      const arrayBuffer = await file.arrayBuffer(); 
-      const workbook = XLSX.read(arrayBuffer); 
-      workbook.SheetNames.forEach(sheet => { 
-        const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 }); 
-        text += `\n[Sheet: ${sheet}]\nPreview:\n${JSON.stringify(data.slice(0, 10), null, 2)}\n`; 
-      }); 
-      onProgress(80); 
-    } else if (ext === 'docx') { 
-      const arrayBuffer = await file.arrayBuffer(); 
-      const result = await mammoth.extractRawText({ arrayBuffer }); 
-      text += result.value; 
-      onProgress(80); 
-    } else if (['png','jpg','jpeg'].includes(ext)) { 
-      const url = URL.createObjectURL(file); 
-      const { data: { text: ocrText } } = await Tesseract.recognize(url, 'ind+eng'); 
-      URL.revokeObjectURL(url); 
-      text += ocrText; 
-      onProgress(80); 
-    } else { 
-      text += await file.text(); 
-      onProgress(80); 
-    } 
-    onProgress(100); 
-    return { name: file.name, extractedText: text.substring(0, 6000) }; 
-  }
-  
-  async function handleMultiFileUpload(files) { 
-    const previewContainer = document.getElementById('multiFilePreview'); 
-    const previewList = document.getElementById('filePreviewList'); 
-    previewContainer.classList.remove('hidden'); 
-    for (const file of files) { 
-      const fileId = Date.now() + '_' + Math.random(); 
-      const progressDiv = document.createElement('div'); 
-      progressDiv.className = 'file-card flex items-center gap-2 bg-black/50 border border-neon-purple/30 rounded-lg px-2 py-1.5 min-w-[130px]'; 
-      progressDiv.innerHTML = `<i class="fas fa-file text-neon-purple text-xs"></i><div class="flex-1"><p class="text-xs truncate">${file.name}</p><div class="w-full bg-gray-800 rounded-full h-1"><div class="progress-bar bg-gradient-to-r from-neon-purple to-neon-pink h-1 rounded-full" style="width:0%"></div></div></div>`; 
-      previewList.appendChild(progressDiv); 
-      try { 
-        const extracted = await extractFileContent(file, (p) => { const bar = progressDiv.querySelector('.progress-bar'); if (bar) bar.style.width = p + '%'; }); 
-        uploadedFiles.push({ id: fileId, ...extracted }); 
-        progressDiv.innerHTML = `<i class="fas fa-check-circle text-green-500 text-xs"></i><div class="flex-1"><p class="text-xs truncate text-green-400">${file.name}</p></div><button class="remove-file text-gray-500 hover:text-red-500 text-xs" data-id="${fileId}"><i class="fas fa-times"></i></button>`; 
-        progressDiv.querySelector('.remove-file')?.addEventListener('click', () => { 
-          uploadedFiles = uploadedFiles.filter(f => f.id !== fileId); 
-          progressDiv.remove(); 
-          if (uploadedFiles.length === 0) previewContainer.classList.add('hidden'); 
-          document.getElementById('fileCount').innerText = `${uploadedFiles.length}`; 
-        }); 
-      } catch(err) { 
-        progressDiv.innerHTML = `<div class="text-red-500 text-xs">✖ ${file.name}</div>`; 
-      } 
-    } 
-    document.getElementById('fileCount').innerText = `${uploadedFiles.length}`; 
-  }
-  
-  async function addMessageWithTyping(role, content) { 
-    const container = document.getElementById('messagesContainer'); 
-    const div = document.createElement('div'); 
-    const time = new Date().toLocaleTimeString(); 
-    if (role === 'user') { 
-      div.className = `flex justify-end mb-3`; 
-      div.innerHTML = `<div class="max-w-[85%]"><div class="bg-gradient-to-r from-neon-purple/10 to-neon-pink/10 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-purple mb-1"><i class="fas fa-user-astronaut"></i> <span>kuro@user:~$</span></div><div class="text-gray-200 text-sm whitespace-pre-wrap break-words">${escapeHtml(content)}</div></div><div class="text-[10px] text-gray-600 mt-1 text-right">${time}</div></div>`; 
-      container.appendChild(div); 
-    } else { 
-      div.className = `flex justify-start mb-3`; 
-      const bubbleDiv = document.createElement('div'); 
-      bubbleDiv.className = 'max-w-[85%]'; 
-      bubbleDiv.innerHTML = `<div class="bg-black/50 border border-neon-purple/30 rounded-2xl px-4 py-2"><div class="flex items-center gap-2 text-xs text-neon-cyan mb-1"><i class="fas fa-terminal"></i> <span>kuro@cli:~$</span></div><div class="message-typing-container message-content"></div></div><div class="text-[10px] text-gray-600 mt-1">${time}</div>`; 
-      div.appendChild(bubbleDiv); 
-      container.appendChild(div); 
-      const typingContainer = bubbleDiv.querySelector('.message-typing-container'); 
-      await typeMessageToElement(typingContainer, content); 
-    } 
-    container.scrollTop = container.scrollHeight; 
-    const welcome = container.querySelector('.flex-col.items-center'); 
-    if (welcome && container.children.length > 2) welcome.remove(); 
-    return div; 
-  }
-  
-  function escapeHtml(str) { return str?.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])) || ''; }
-  
-  async function saveChatMessage(role, content) { 
-    if (!currentChatId) await createNewChat(); 
-    await saveMessage({ topicId: currentChatId, role, content, time: new Date().toLocaleTimeString(), timestamp: Date.now() }); 
-    const topics = await getAllTopics(); 
-    const topic = topics.find(t => t.id === currentChatId); 
-    if (topic) { 
-      topic.updatedAt = Date.now(); 
-      topic.preview = content.substring(0, 40); 
-      await saveTopic(topic); 
-    } 
-    await loadChatList(); 
-  }
-  
-  async function loadChatList() { 
-    let topics = await getAllTopics(); 
-    const searchTerm = document.getElementById('searchChat')?.value.toLowerCase() || ''; 
-    if (searchTerm) topics = topics.filter(t => t.name.toLowerCase().includes(searchTerm)); 
-    const pinned = topics.filter(t => t.pinned).sort((a,b) => b.updatedAt - a.updatedAt); 
-    const unpinned = topics.filter(t => !t.pinned).sort((a,b) => b.updatedAt - a.updatedAt); 
-    const container = document.getElementById('chatList'); 
-    if (topics.length === 0) { 
-      container.innerHTML = `<div class="text-center text-gray-600 text-xs py-8"><i class="fas fa-terminal text-2xl mb-2 block"></i>no sessions</div>`; 
-      return; 
-    } 
-    container.innerHTML = [...pinned, ...unpinned].map(topic => `<div class="chat-item group px-3 py-2 hover:bg-gradient-to-r hover:from-neon-purple/10 cursor-pointer transition border-l-2 border-transparent hover:border-neon-purple" data-id="${topic.id}"><div class="flex items-center gap-2"><i class="fas ${topic.pinned ? 'fa-thumbtack text-neon-orange rotate-45' : 'fa-hashtag text-neon-purple/50'} text-xs"></i><div class="flex-1 min-w-0"><div class="flex justify-between items-center"><span class="text-xs font-mono truncate text-gray-300">${escapeHtml(topic.name)}</span><button class="session-menu-btn text-gray-500 hover:text-neon-purple opacity-0 group-hover:opacity-100 transition p-1" data-id="${topic.id}" data-name="${escapeHtml(topic.name)}"><i class="fas fa-ellipsis-v text-xs"></i></button></div><p class="text-[10px] text-gray-600 truncate">${escapeHtml(topic.preview || 'click to open')}</p></div></div></div>`).join(''); 
-    document.querySelectorAll('.chat-item').forEach(el => { el.addEventListener('click', (e) => { if (!e.target.closest('.session-menu-btn')) loadChat(parseInt(el.dataset.id)); }); }); 
-    document.querySelectorAll('.session-menu-btn').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); showContextMenu(e, parseInt(btn.dataset.id), btn.dataset.name); }); }); 
-  }
-  
-  async function loadChat(topicId) { 
-    if (isGenerating) stopChatGeneration(); 
-    currentChatId = topicId; 
-    const messages = await getMessagesByTopic(topicId); 
-    const container = document.getElementById('messagesContainer'); 
-    container.innerHTML = ''; 
-    const topics = await getAllTopics();
-    const topicData = topics.find(t => t.id === topicId);
-    currentTopicFocus = topicData?.topicFocus || null;
-    updateTopicBadge();
-    for (const msg of messages.sort((a,b) => a.timestamp - b.timestamp)) { await addMessageWithTyping(msg.role, msg.content); }
-    if (messages.length === 0) {
-      let welcomeMsg = '✓ **KURO CLI v2.0 Ready!**\n\n🎤 **New Features:**\n• Voice Input - Click microphone to speak\n• Text-to-Speech - Toggle for voice output\n• Live Preview - Preview HTML/CSS/JS\n• PWA Support - Install as app\n\n💬 Ask me anything or try voice input!';
-      if (currentTopicFocus) {
-        welcomeMsg = `✓ **Session Ready - Focused on: ${currentTopicFocus}** 🔒\n\n🎤 Try voice input or type your question!`;
-      }
-      await addMessageWithTyping('assistant', welcomeMsg);
+}
+
+// ==================== SEND MESSAGE ====================
+async function sendMessage() {
+    if (isGenerating) {
+        showOutputMessage("Chat is generating. Use Stop button.", "warning");
+        return;
     }
-    if (window.innerWidth < 768) closeMobileSidebar(); 
-  }
-  
-  async function createNewChat() { 
-    if (isGenerating) stopChatGeneration(); 
-    const newTopic = { name: `Session ${new Date().toLocaleTimeString()}`, preview: 'new session', updatedAt: Date.now(), createdAt: Date.now(), pinned: false, topicFocus: null }; 
-    const id = await saveTopic(newTopic); 
-    currentChatId = id; 
-    currentTopicFocus = null; 
-    uploadedFiles = []; 
-    document.getElementById('messagesContainer').innerHTML = ''; 
-    document.getElementById('multiFilePreview').classList.add('hidden'); 
-    document.getElementById('filePreviewList').innerHTML = ''; 
-    document.getElementById('fileCount').innerText = '0'; 
-    updateTopicBadge(); 
-    await addMessageWithTyping('assistant', '✓ **KURO CLI v2.0 Ready!**\n\n🎤 **Voice Commands:**\n• Click 🎤 to speak\n• Toggle 🔊 for voice output\n• Try "/help" for all commands\n\n💡 Install as PWA for best experience!'); 
-    await loadChatList(); 
-    if (window.innerWidth < 768) closeMobileSidebar(); 
-  }
-  
-  // ========== DRAG & DROP ==========
-  function initDragAndDrop() {
-    const chatArea = document.querySelector('.chat-area');
-    chatArea.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      chatArea.classList.add('drag-over');
-    });
-    chatArea.addEventListener('dragleave', () => {
-      chatArea.classList.remove('drag-over');
-    });
-    chatArea.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      chatArea.classList.remove('drag-over');
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) {
-        await addMessageWithTyping('user', `📁 Drag & drop: ${files.length} file(s)`);
-        await handleMultiFileUpload(files);
-      }
-    });
-  }
-  
-  // ========== PWA INSTALL PROMPT ==========
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    const installBtn = document.createElement('button');
-    installBtn.innerHTML = '<i class="fas fa-download mr-1"></i> Install App';
-    installBtn.className = 'bg-gradient-to-r from-neon-purple/20 to-neon-pink/20 border border-neon-purple/50 rounded-lg px-3 py-1 text-xs hover:scale-105 transition';
-    installBtn.onclick = async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          showOutputMessage('📱 Installing KURO CLI...', 'success');
-        }
-        deferredPrompt = null;
-        installBtn.remove();
-      }
-    };
-    const header = document.querySelector('.bg-\[\#0a0a0a\]\/80 > div:last-child');
-    if (header && !document.getElementById('installPwaBtn')) {
-      installBtn.id = 'installPwaBtn';
-      header.appendChild(installBtn);
-    }
-  });
-  
-  // ========== AUTO-SAVE DRAFT ==========
-  const userInput = document.getElementById('userInput');
-  userInput.addEventListener('input', () => {
-    localStorage.setItem('draft', userInput.value);
-  });
-  const savedDraft = localStorage.getItem('draft');
-  if (savedDraft) {
-    userInput.value = savedDraft;
-  }
-  
-  // ========== EVENT HANDLERS ==========
-  const sendBtn = document.getElementById('sendBtn'), attachBtn = document.getElementById('attachBtn'), fileInput = document.getElementById('fileInput'), newChatBtn = document.getElementById('newChatBtn'), modelSelect = document.getElementById('modelSelect'), searchChat = document.getElementById('searchChat'), mobileMenuBtn = document.getElementById('mobileMenuBtn'), toggleOutputBtn = document.getElementById('toggleOutputBtn'), closeOutputBtn = document.getElementById('closeOutputBtn'), clearOutputBtn = document.getElementById('clearOutputBtn'), outputArea = document.getElementById('outputArea'), toggleSidebarMainBtn = document.getElementById('toggleSidebarMainBtn'), hideSidebarInternalBtn = document.getElementById('hideSidebarInternalBtn'), stopChatBtn = document.getElementById('stopChatBtn'), themeToggleBtn = document.getElementById('themeToggleBtn'), exportChatBtn = document.getElementById('exportChatBtn'), clearChatBtn = document.getElementById('clearChatBtn'), voiceBtn = document.getElementById('voiceBtn'), ttsToggleBtn = document.getElementById('ttsToggleBtn'), closePreviewBtn = document.getElementById('closePreviewBtn');
-  
-  themeToggleBtn.addEventListener('click', toggleTheme);
-  toggleOutputBtn.addEventListener('click', () => outputArea.classList.toggle('open'));
-  closeOutputBtn.addEventListener('click', () => outputArea.classList.remove('open'));
-  clearOutputBtn.addEventListener('click', () => { document.getElementById('outputContent').innerHTML = '<div class="text-gray-500 text-center py-10">▶ Console cleared.</div>'; });
-  toggleSidebarMainBtn.addEventListener('click', toggleSidebarHideShow);
-  if (hideSidebarInternalBtn) hideSidebarInternalBtn.addEventListener('click', hideSidebar);
-  stopChatBtn.addEventListener('click', stopChatGeneration);
-  attachBtn.addEventListener('click', () => fileInput.click());
-  voiceBtn.addEventListener('click', startVoiceInput);
-  ttsToggleBtn.addEventListener('click', toggleTTS);
-  closePreviewBtn.addEventListener('click', closePreview);
-  exportChatBtn.addEventListener('click', async () => {
-    const response = await handleCommand('/export');
-    if (response) await addMessageWithTyping('assistant', response);
-  });
-  clearChatBtn.addEventListener('click', async () => {
-    if (confirm('Clear all messages?')) await clearCurrentChat();
-  });
-  
-  fileInput.addEventListener('change', async (e) => { 
-    const files = Array.from(e.target.files); 
-    if (files.length > 0) { 
-      await addMessageWithTyping('user', `📁 Upload: ${files.map(f => f.name).join(', ')}`); 
-      await saveChatMessage('user', `upload ${files.length} file(s)`); 
-      await handleMultiFileUpload(files); 
-    } 
-    fileInput.value = ''; 
-  });
-  
-  async function sendMessage() { 
-    if (isGenerating) { showOutputMessage("Chat is generating. Use Stop button.", "warning"); return; } 
-    const text = userInput.value.trim(); 
-    if (!text && uploadedFiles.length === 0) return; 
+    
+    const text = document.getElementById('userInput').value.trim();
+    if (!text && storedFiles.size === 0) return;
     
     if (text.startsWith('/')) {
-      const response = await handleCommand(text);
-      if (response) {
-        await addMessageWithTyping('user', text);
-        await saveChatMessage('user', text);
-        await addMessageWithTyping('assistant', response);
-        await saveChatMessage('assistant', response);
-      }
-      userInput.value = '';
-      localStorage.removeItem('draft');
-      userInput.style.height = 'auto';
-      return;
+        const response = await handleCommand(text);
+        if (response) {
+            await addMessageWithTyping('user', text);
+            await addMessageWithTyping('assistant', response);
+        }
+        document.getElementById('userInput').value = '';
+        localStorage.removeItem('draft');
+        return;
     }
     
-    sendBtn.disabled = true; 
-    sendBtn.style.opacity = '0.5'; 
-    isGenerating = true; 
-    stopChatBtn.style.display = 'flex'; 
-    try { 
-      if (text) { 
-        await addMessageWithTyping('user', text); 
-        await saveChatMessage('user', text); 
-      } 
-      userInput.value = ''; 
-      localStorage.removeItem('draft');
-      userInput.style.height = 'auto'; 
-      
-      const allMessages = await getMessagesByTopic(currentChatId);
-      const conversationHistory = allMessages.sort((a,b) => a.timestamp - b.timestamp);
-      
-      if (!currentTopicFocus && conversationHistory.length >= 2) {
-        const firstQuery = conversationHistory.find(m => m.role === 'user')?.content || '';
-        if (firstQuery.toLowerCase().includes('kalkulator') || firstQuery.toLowerCase().includes('calculator')) {
-          currentTopicFocus = 'Calculator';
-          const topics = await getAllTopics();
-          const topic = topics.find(t => t.id === currentChatId);
-          if (topic) {
-            topic.topicFocus = currentTopicFocus;
-            topic.name = `Calculator - ${new Date().toLocaleTimeString()}`;
-            await saveTopic(topic);
-            await loadChatList();
-          }
-          updateTopicBadge();
-          await addMessageWithTyping('assistant', `🔒 **Topic Focus: Calculator**\n\nSession ini fokus pada Calculator. Buat session baru untuk topik lain.`);
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = '0.5';
+    isGenerating = true;
+    updateStopButtons(true);
+    
+    try {
+        if (text) {
+            await addMessageWithTyping('user', text);
         }
-      }
-      
-      const response = await sendToAI(text || "analyze files", uploadedFiles.length > 0 ? uploadedFiles : null, conversationHistory);
-      if (response) { 
-        await addMessageWithTyping('assistant', response); 
-        await saveChatMessage('assistant', response); 
-      } 
-    } finally { 
-      isGenerating = false; 
-      sendBtn.disabled = false; 
-      sendBtn.style.opacity = '1'; 
-      stopChatBtn.style.display = 'none'; 
-    } 
-  }
-  
-  sendBtn.addEventListener('click', sendMessage);
-  userInput.addEventListener('keydown', (e) => { 
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { 
-      e.preventDefault(); 
-      sendMessage(); 
-    } else if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-  userInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(80, this.scrollHeight) + 'px'; });
-  newChatBtn.addEventListener('click', () => createNewChat());
-  modelSelect.addEventListener('change', (e) => { currentModel = e.target.value; addMessageWithTyping('assistant', `✓ Model: ${currentModel}`); });
-  searchChat.addEventListener('input', () => loadChatList());
-  mobileMenuBtn.addEventListener('click', () => openMobileSidebar());
-  
-  document.querySelectorAll('.quick-cmd').forEach(btn => { 
-    btn.addEventListener('click', async (e) => { 
-      const cmd = btn.dataset.cmd;
-      if (cmd) {
-        const response = await handleCommand(cmd);
+        document.getElementById('userInput').value = '';
+        localStorage.removeItem('draft');
+        
+        const fileContext = Array.from(storedFiles.values()).map(f => ({
+            name: Array.from(storedFiles.keys()).find(k => storedFiles.get(k) === f),
+            extractedText: f.content?.substring(0, 3000) || ""
+        }));
+        
+        const response = await sendToAI(text || "analyze files", fileContext.length > 0 ? fileContext : null);
         if (response) {
-          await addMessageWithTyping('user', cmd);
-          await saveChatMessage('user', cmd);
-          await addMessageWithTyping('assistant', response);
-          await saveChatMessage('assistant', response);
+            await addMessageWithTyping('assistant', response);
         }
-      }
-    }); 
-  });
-  
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      userInput.focus();
+    } finally {
+        isGenerating = false;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        updateStopButtons(false);
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
-      e.preventDefault();
-      clearCurrentChat();
+}
+
+// ==================== INDEXEDDB ====================
+let db = null;
+const DB_NAME = "KURO_CLI_DB", CHATS_STORE = "chats", TOPICS_STORE = "topics";
+
+async function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => { db = request.result; resolve(db); };
+        request.onupgradeneeded = (event) => {
+            const dbRef = event.target.result;
+            if (!dbRef.objectStoreNames.contains(CHATS_STORE)) {
+                dbRef.createObjectStore(CHATS_STORE, { keyPath: "id", autoIncrement: true });
+            }
+            if (!dbRef.objectStoreNames.contains(TOPICS_STORE)) {
+                dbRef.createObjectStore(TOPICS_STORE, { keyPath: "id", autoIncrement: true });
+            }
+        };
+    });
+}
+
+async function saveTopic(topic) {
+    if (!db) await initDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction([TOPICS_STORE], "readwrite");
+        const req = tx.objectStore(TOPICS_STORE).put(topic);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function getAllTopics() {
+    if (!db) await initDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction([TOPICS_STORE], "readonly");
+        const req = tx.objectStore(TOPICS_STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+    });
+}
+
+async function saveMessage(message) {
+    if (!db) await initDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction([CHATS_STORE], "readwrite");
+        const req = tx.objectStore(CHATS_STORE).put(message);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function getMessagesByTopic(topicId) {
+    if (!db) await initDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction([CHATS_STORE], "readonly");
+        const req = tx.objectStore(CHATS_STORE).getAll();
+        req.onsuccess = () => resolve((req.result || []).filter(m => m.topicId === topicId));
+    });
+}
+
+async function deleteTopic(topicId) {
+    if (!db) await initDB();
+    return new Promise((resolve) => {
+        const tx = db.transaction([TOPICS_STORE, CHATS_STORE], "readwrite");
+        tx.objectStore(TOPICS_STORE).delete(topicId);
+        const messagesReq = tx.objectStore(CHATS_STORE).getAll();
+        messagesReq.onsuccess = () => {
+            messagesReq.result.filter(m => m.topicId === topicId).forEach(msg => {
+                tx.objectStore(CHATS_STORE).delete(msg.id);
+            });
+            resolve();
+        };
+    });
+}
+
+async function loadChatList() {
+    const topics = await getAllTopics();
+    const container = document.getElementById('chatList');
+    if (topics.length === 0) {
+        container.innerHTML = `<div class="text-center text-gray-600 text-xs py-8"><i class="fas fa-terminal text-2xl mb-2 block"></i>no sessions</div>`;
+        return;
     }
-  });
-  
-  window.addEventListener('resize', () => { 
-    const isMobile = window.innerWidth <= 768; 
-    const sidebar = document.getElementById('sidebar'); 
-    if (!isMobile) { 
-      sidebar.classList.remove('mobile-open'); 
-      document.getElementById('sidebarOverlay').classList.remove('active'); 
-      document.body.style.overflow = ''; 
-      const saved = localStorage.getItem('sidebarHidden'); 
-      if (saved === 'true') { sidebar.classList.add('hidden-sidebar'); isSidebarHidden = true; } 
-      else { sidebar.classList.remove('hidden-sidebar'); isSidebarHidden = false; } 
-    } 
-  });
-  
-  // Initialize
-  initDB().then(() => { loadChatList(); createNewChat(); loadSidebarState(); loadThemePreference(); initSpeechRecognition(); initDragAndDrop(); });
-  setTimeout(() => { initPyodide().catch(console.error); }, 5000);
+    container.innerHTML = topics.sort((a,b) => b.updatedAt - a.updatedAt).map(topic => `
+        <div class="chat-item group px-3 py-2 hover:bg-gradient-to-r hover:from-neon-purple/10 cursor-pointer transition border-l-2 border-transparent hover:border-neon-purple" data-id="${topic.id}">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-hashtag text-neon-purple/50 text-xs"></i>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-mono truncate text-gray-300">${escapeHtml(topic.name)}</span>
+                    </div>
+                    <p class="text-[10px] text-gray-600 truncate">${escapeHtml(topic.preview || 'click to open')}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.querySelectorAll('.chat-item').forEach(el => {
+        el.addEventListener('click', () => loadChat(parseInt(el.dataset.id)));
+    });
+}
+
+async function loadChat(topicId) {
+    if (isGenerating) stopChatGeneration();
+    currentChatId = topicId;
+    const messages = await getMessagesByTopic(topicId);
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML = '';
+    for (const msg of messages.sort((a,b) => a.timestamp - b.timestamp)) {
+        await addMessageWithTyping(msg.role, msg.content);
+    }
+    if (window.innerWidth < 768) closeMobileSidebar();
+}
+
+async function createNewChat() {
+    if (isGenerating) stopChatGeneration();
+    const newTopic = {
+        name: `Session ${new Date().toLocaleTimeString()}`,
+        preview: 'new session',
+        updatedAt: Date.now(),
+        createdAt: Date.now(),
+        pinned: false,
+        topicFocus: null
+    };
+    const id = await saveTopic(newTopic);
+    currentChatId = id;
+    document.getElementById('messagesContainer').innerHTML = '';
+    storedFiles.clear();
+    document.getElementById('multiFilePreview').classList.add('hidden');
+    document.getElementById('filePreviewList').innerHTML = '';
+    updateFileCount();
+    await addMessageWithTyping('assistant', '✓ **KURO CLI v2.0 - Python & File Editor Ready!**\n\n**🐍 Features:**\n• Run Python code - Use ```python code blocks\n• Edit files - "edit [filename] dan [instruction]"\n• Example: "edit makalah.docx dan tambahkan footnote"\n• Type `/help` for all commands\n\n**🎤 Voice:** Click microphone to speak');
+    await loadChatList();
+    if (window.innerWidth < 768) closeMobileSidebar();
+}
+
+// ==================== DRAG & DROP ====================
+function initDragAndDrop() {
+    const chatArea = document.querySelector('.chat-area');
+    chatArea.addEventListener('dragover', (e) => { e.preventDefault(); chatArea.classList.add('drag-over'); });
+    chatArea.addEventListener('dragleave', () => { chatArea.classList.remove('drag-over'); });
+    chatArea.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        chatArea.classList.remove('drag-over');
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+            await addMessageWithTyping('user', `📁 Drag & drop: ${files.length} file(s)`);
+            await handleMultiFileUpload(files);
+        }
+    });
+}
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', async () => {
+    await initDB();
+    await loadChatList();
+    await createNewChat();
+    loadSidebarState();
+    loadThemePreference();
+    initSpeechRecognition();
+    initDragAndDrop();
+    
+    // Start loading Python in background
+    setTimeout(() => {
+        initPyodide().catch(console.error);
+    }, 2000);
+});
+
+// ==================== EVENT LISTENERS ====================
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('attachBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('voiceBtn').addEventListener('click', startVoiceInput);
+document.getElementById('toggleSidebarMainBtn').addEventListener('click', toggleSidebarHideShow);
+document.getElementById('hideSidebarInternalBtn').addEventListener('click', hideSidebar);
+document.getElementById('closeOutputBtn').addEventListener('click', () => document.getElementById('outputArea').classList.remove('open'));
+document.getElementById('clearOutputBtn').addEventListener('click', () => {
+    document.getElementById('outputContent').innerHTML = '<div class="text-gray-500 text-center py-10">▶ Console cleared.</div>';
+});
+document.getElementById('closePreviewBtn').addEventListener('click', closePreview);
+document.getElementById('saveFileBtn').addEventListener('click', saveEditedFile);
+document.getElementById('closeEditorBtn').addEventListener('click', closeFileEditor);
+document.getElementById('toggleOutputBtnDesktop').addEventListener('click', () => document.getElementById('outputArea').classList.toggle('open'));
+document.getElementById('toggleOutputBtnMobile').addEventListener('click', () => document.getElementById('outputArea').classList.toggle('open'));
+document.getElementById('themeToggleBtnDesktop').addEventListener('click', toggleTheme);
+document.getElementById('themeToggleBtnMobile').addEventListener('click', toggleTheme);
+document.getElementById('ttsToggleBtnDesktop').addEventListener('click', toggleTTS);
+document.getElementById('ttsToggleBtnMobile').addEventListener('click', toggleTTS);
+document.getElementById('exportChatBtnDesktop').addEventListener('click', async () => {
+    const response = await handleCommand('/export');
+    if (response) await addMessageWithTyping('assistant', response);
+});
+document.getElementById('exportChatBtnMobile').addEventListener('click', async () => {
+    const response = await handleCommand('/export');
+    if (response) await addMessageWithTyping('assistant', response);
+});
+document.getElementById('clearChatBtnDesktop').addEventListener('click', async () => {
+    if (confirm('Clear all messages?')) await handleCommand('/clear');
+});
+document.getElementById('clearChatBtnMobile').addEventListener('click', async () => {
+    if (confirm('Clear all messages?')) await handleCommand('/clear');
+});
+document.getElementById('newChatBtnDesktop').addEventListener('click', createNewChat);
+document.getElementById('newChatBtnMobile').addEventListener('click', createNewChat);
+document.getElementById('modelSelectDesktop').addEventListener('change', (e) => syncModelSelect(e.target.value));
+document.getElementById('modelSelectMobile').addEventListener('change', (e) => syncModelSelect(e.target.value));
+document.getElementById('stopChatBtnDesktop').addEventListener('click', stopChatGeneration);
+document.getElementById('stopChatBtnMobile').addEventListener('click', stopChatGeneration);
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+        await addMessageWithTyping('user', `📁 Upload: ${files.map(f => f.name).join(', ')}`);
+        await handleMultiFileUpload(files);
+    }
+    e.target.value = '';
+});
+
+const userInput = document.getElementById('userInput');
+userInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(80, this.scrollHeight) + 'px';
+    localStorage.setItem('draft', this.value);
+});
+userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        sendMessage();
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+document.getElementById('searchChat').addEventListener('input', loadChatList);
+document.querySelectorAll('.quick-cmd').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const cmd = btn.dataset.cmd;
+        if (cmd) {
+            const response = await handleCommand(cmd);
+            if (response) {
+                await addMessageWithTyping('user', cmd);
+                await addMessageWithTyping('assistant', response);
+            }
+        }
+    });
+});
+
+const savedDraft = localStorage.getItem('draft');
+if (savedDraft) userInput.value = savedDraft;
+
+window.addEventListener('resize', () => {
+    const isMobile = window.innerWidth <= 768;
+    const sidebar = document.getElementById('sidebar');
+    if (!isMobile) {
+        sidebar.classList.remove('mobile-open');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+        document.body.style.overflow = '';
+        const saved = localStorage.getItem('sidebarHidden');
+        if (saved === 'true') {
+            sidebar.classList.add('hidden-sidebar');
+            isSidebarHidden = true;
+        } else {
+            sidebar.classList.remove('hidden-sidebar');
+            isSidebarHidden = false;
+        }
+    }
+});
 </script>
 
-<!-- Service Worker for PWA -->
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      console.log('Service Worker registered');
-    }).catch(err => {
-      console.log('Service Worker failed:', err);
-    });
-  }
-</script>
-
-<!-- Create manifest.json and sw.js dynamically -->
-<script>
-  // Create manifest.json
-  const manifest = {
-    name: "KURO CLI",
-    short_name: "KURO",
-    description: "Terminal AI Assistant with Voice & Code Runner",
-    start_url: ".",
-    display: "standalone",
-    theme_color: "#0a0a0a",
-    background_color: "#0a0a0a",
-    icons: [
-      {
-        src: "https://cdn-icons-png.flaticon.com/512/5969/5969020.png",
-        sizes: "192x192",
-        type: "image/png"
-      },
-      {
-        src: "https://cdn-icons-png.flaticon.com/512/5969/5969020.png",
-        sizes: "512x512",
-        type: "image/png"
-      }
-    ]
-  };
-  
-  const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-  const manifestURL = URL.createObjectURL(manifestBlob);
-  const manifestLink = document.createElement('link');
-  manifestLink.rel = 'manifest';
-  manifestLink.href = manifestURL;
-  document.head.appendChild(manifestLink);
-  
-  // Create service worker
-  const swCode = `self.addEventListener('install', event => {
-    event.waitUntil(self.skipWaiting());
-  });
-  self.addEventListener('fetch', event => {
-    event.respondWith(fetch(event.request));
-  });`;
-  
-  const swBlob = new Blob([swCode], {type: 'application/javascript'});
-  const swURL = URL.createObjectURL(swBlob);
-  
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register(swURL).then(reg => {
-      console.log('Service Worker registered with blob URL');
-    });
-  }
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(console.log);
+}
+const manifest = {
+    name: "KURO CLI", short_name: "KURO", description: "Terminal AI Assistant with Python & File Editor",
+    start_url: ".", display: "standalone", theme_color: "#0a0a0a", background_color: "#0a0a0a",
+    icons: [{ src: "https://cdn-icons-png.flaticon.com/512/5969/5969020.png", sizes: "192x192", type: "image/png" }]
+};
+const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+const manifestLink = document.createElement('link');
+manifestLink.rel = 'manifest';
+manifestLink.href = URL.createObjectURL(manifestBlob);
+document.head.appendChild(manifestLink);
 </script>
 </body>
 </html>
